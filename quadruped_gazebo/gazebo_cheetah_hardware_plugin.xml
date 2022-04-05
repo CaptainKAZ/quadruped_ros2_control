@@ -1,0 +1,10 @@
+<library path="gazebo_cheetah_hardware_plugin">
+  <class
+    name="quadruped_gazebo/GazeboCheetahSystem"
+    type="quadruped_gazebo::GazeboCheetahSystem"
+    base_class_type="gazebo_ros2_control::GazeboSystemInterface">
+    <description>
+      Gazebo Cheetah Hybird Joint
+    </description>
+  </class>
+</library>

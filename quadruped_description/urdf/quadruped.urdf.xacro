@@ -1,0 +1,107 @@
+<?xml version="1.0" ?>
+<robot name="quadruped"
+    xmlns:xacro="http://ros.org/wiki/xacro">
+
+    <xacro:arg name="robot_type"
+        default="mini_cheetah" />
+    <xacro:arg name="hung_up"
+        default="False" />
+    <xacro:arg name="gazebo_control"
+        default="False" />
+
+    <xacro:include filename="$(find quadruped_description)/urdf/common/leg.xacro" />
+    <xacro:include filename="$(find quadruped_description)/urdf/common/material.xacro" />
+    <xacro:include filename="$(find quadruped_description)/urdf/robot_const/$(arg robot_type).xacro" />
+
+    <xacro:if value="$(arg hung_up)">
+        <link name="world" />
+        <joint name="base_static_joint"
+            type="fixed">
+            <origin rpy="0 0 0"
+                xyz="0 0 0" />
+            <parent link="world" />
+            <child link="base_link" />
+        </joint>
+    </xacro:if>
+    <xacro:unless value="$(arg hung_up)">
+        <link name="root" />
+        <joint name="root_dummy_joint"
+            type="fixed">
+            <origin rpy="0 0 0"
+                xyz="0 0 0" />
+            <parent link="root" />
+            <child link="base_link" />
+        </joint>
+    </xacro:unless>
+
+    <link name="base_link">
+        <visual>
+            <origin rpy="0 0 0"
+                xyz="0 0 0" />
+            <geometry>
+                <mesh filename="package://quadruped_description/meshes/$(arg robot_type)_base.obj"
+                    scale="1 1 1" />
+            </geometry>
+            <material name="green" />
+        </visual>
+        <collision>
+            <origin rpy="0 0 0"
+                xyz="0 0 0" />
+            <geometry>
+                <box size="${base_length} ${base_width} ${base_height}" />
+            </geometry>
+        </collision>
+        <inertial>
+            <origin rpy="0 0 0"
+                xyz="${base_com_x} ${base_com_y} ${base_com_z}" />
+            <mass value="${base_mass}" />
+            <inertia ixx="${base_ixx}"
+                ixy="${base_ixy}"
+                ixz="${base_ixz}"
+                iyy="${base_iyy}"
+                iyz="${base_iyz}"
+                izz="${base_izz}" />
+        </inertial>
+    </link>
+
+    <xacro:leg prefix="FR"
+        mirror="-1"
+        mirror_mesh="False"
+        front_hind="1"
+        front_hind_mesh="True">
+        <origin rpy="0 0 0"
+            xyz="${leg_offset_x} ${-leg_offset_y} 0" />
+    </xacro:leg>
+
+    <xacro:leg prefix="FL"
+        mirror="1"
+        mirror_mesh="True"
+        front_hind="1"
+        front_hind_mesh="True">
+        <origin rpy="0 0 0"
+            xyz="${leg_offset_x} ${leg_offset_y} 0" />
+    </xacro:leg>
+
+    <xacro:leg prefix="RR"
+        mirror="-1"
+        mirror_mesh="False"
+        front_hind="-1"
+        front_hind_mesh="False">
+        <origin rpy="0 0 0"
+            xyz="${-leg_offset_x} ${-leg_offset_y} 0" />
+    </xacro:leg>
+
+    <xacro:leg prefix="RL"
+        mirror="1"
+        mirror_mesh="True"
+        front_hind="-1"
+        front_hind_mesh="False">
+        <origin rpy="0 0 0"
+            xyz="${-leg_offset_x} ${leg_offset_y} 0" />
+    </xacro:leg>
+
+
+    <xacro:if value="$(arg gazebo_control)">
+        <xacro:include filename="$(find quadruped_description)/urdf/ros_control/gazebo.xacro" />
+    </xacro:if >
+</robot>

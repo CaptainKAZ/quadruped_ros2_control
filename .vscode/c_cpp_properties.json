@@ -1,0 +1,26 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${workspaceFolder}/.vscode/browse.vc.db",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/neo/ros2_ws/install/ros2_control_demo_hardware/include/**",
+        "/home/neo/ros2_ws/install/quadruped_gazebo/include/**",
+        "/home/neo/ros2_ws/install/gazebo_ros2_control/include/**",
+        "/opt/ros/foxy/include/**",
+        "/home/neo/ros2_ws/src/gazebo_ros2_control/gazebo_ros2_control/include/**",
+        "/home/neo/ros2_ws/src/quadruped_gazebo/include/**",
+        "/home/neo/ros2_ws/src/ros2_control_demos/ros2_control_demo_hardware/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

@@ -1,0 +1,242 @@
+<?xml version="1.0"?>
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <!-- <xacro:include filename="$(find quadruped_description)/urdf/ros_control/transmission.urdf" /> -->
+    <!-- <xacro:include filename="$(find quadruped_description)/urdf/common/pointer.xacro" /> -->
+    <xacro:macro name="leg"
+        params="prefix mirror mirror_mesh front_hind front_hind_mesh *origin">
+
+        <joint name="${prefix}_hip_joint"
+            type="revolute">
+            <xacro:insert_block name="origin" />
+            <parent link="base_link" />
+            <child link="${prefix}_hip_link" />
+            <axis xyz="1 0 0" />
+            <dynamics damping="${damping}"
+                friction="${friction}" />
+            <xacro:if value="${(mirror_mesh == True)}">
+                <limit effort="${hip_torque_max}"
+                    velocity="${hip_velocity_max}"
+                    lower="${hip_min*PI/180}"
+                    upper="${hip_max*PI/180}" />
+            </xacro:if>
+            <xacro:if value="${(mirror_mesh == False)}">
+                <limit effort="${hip_torque_max}"
+                    velocity="${hip_velocity_max}"
+                    lower="${-1.0*hip_max*PI/180}"
+                    upper="${-1.0*hip_min*PI/180}" />
+            </xacro:if>
+            <!-- <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" /> -->
+        </joint>
+
+        <link name="${prefix}_hip_link">
+            <visual>
+                <xacro:if value="${(mirror_mesh == True) and (front_hind_mesh == True)}">
+                    <origin rpy="0 0 ${-PI/2}"
+                        xyz="${-1.0*hip_mesh_offest_x} 0 0" />
+                </xacro:if>
+                <xacro:if value="${(mirror_mesh == False) and (front_hind_mesh == True)}">
+                    <origin rpy="${PI} 0 ${PI/2}"
+                        xyz="${-1.0*hip_mesh_offest_x} 0 0" />
+                </xacro:if>
+                <xacro:if value="${(mirror_mesh == True) and (front_hind_mesh == False)}">
+                    <origin rpy="${PI} 0 ${-PI/2}"
+                        xyz="${hip_mesh_offest_x} 0 0" />
+                </xacro:if>
+                <xacro:if value="${(mirror_mesh == False) and (front_hind_mesh == False)}">
+                    <origin rpy="0 0 ${PI/2}"
+                        xyz="${hip_mesh_offest_x} 0 0" />
+                </xacro:if>
+                <geometry>
+                    <mesh filename="package://quadruped_description/meshes/$(arg robot_type)_hip.obj"
+                        scale="1 1 1" />
+                </geometry>
+                <material name="gold" />
+            </visual>
+            <collision>
+                <origin rpy="0 ${-PI/2} 0"
+                        xyz="0 0 0" />
+                <geometry>
+                    <cylinder radius="${hip_height/2.0}"
+                        length="${hip_length}" />
+                </geometry>
+            </collision>
+            <inertial>
+                <origin rpy="0 0 0"
+                    xyz="${hip_com_x*front_hind} ${hip_com_y*mirror} ${hip_com_z}" />
+                <mass value="${hip_mass}" />
+                <inertia ixx="${hip_ixx}"
+                    ixy="${hip_ixy*mirror*front_hind}"
+                    ixz="${hip_ixz*front_hind}"
+                    iyy="${hip_iyy}"
+                    iyz="${hip_iyz*mirror}"
+                    izz="${hip_izz}" />
+            </inertial>
+        </link>
+
+        <joint name="${prefix}_thigh_joint"
+            type="revolute">
+            <origin rpy="0 0 0"
+                xyz="0 ${thigh_offset_y*mirror} 0" />
+            <parent link="${prefix}_hip_link" />
+            <child link="${prefix}_thigh_link" />
+            <axis xyz="0 -1 0" />
+            <dynamics damping="${damping}"
+                friction="${friction}" />
+            <limit effort="${thigh_torque_max}"
+                velocity="${thigh_velocity_max}"
+                lower="${thigh_min*PI/180}"
+                upper="${thigh_max*PI/180}" />
+            <!-- <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" /> -->
+        </joint>
+
+        <link name="${prefix}_thigh_link">
+            <visual>
+                <origin rpy="0 ${-PI/2} 0"
+                    xyz="0 0 0" />
+                <geometry>
+                    <mesh filename="package://quadruped_description/meshes/$(arg robot_type)_thigh.obj"
+                        scale="1 1 1" />
+                </geometry>
+                <material name="white_blue" />
+            </visual>
+            <collision>
+                <origin rpy="0 0 0"
+                    xyz="0 0 ${-1.0*thigh_height / 2.0}" />
+                <geometry>
+                    <box size="${thigh_length} ${thigh_width} ${thigh_height}" />
+                </geometry>
+            </collision>
+            <inertial>
+                <origin rpy="0 0 0"
+                    xyz="${thigh_com_x} ${thigh_com_y*mirror} ${thigh_com_z}" />
+                <mass value="${thigh_mass}" />
+                <inertia ixx="${thigh_ixx}"
+                    ixy="${thigh_ixy*mirror}"
+                    ixz="${thigh_ixz}"
+                    iyy="${thigh_iyy}"
+                    iyz="${thigh_iyz*mirror}"
+                    izz="${thigh_izz}" />
+            </inertial>
+        </link>
+
+
+        <joint name="${prefix}_calf_joint"
+            type="revolute">
+            <origin rpy="0 0 0"
+                xyz="0 0 ${-1.0*calf_offset_z}" />
+            <parent link="${prefix}_thigh_link" />
+            <child link="${prefix}_calf_link" />
+            <axis xyz="0 -1 0" />
+            <dynamics damping="${damping}"
+                friction="${friction}" />
+            <limit effort="${calf_torque_max}"
+                velocity="${calf_velocity_max}"
+                lower="${calf_min*PI/180}"
+                upper="${calf_max*PI/180}" />
+            <!-- <safety_controller k_velocity="10" k_position="15" soft_lower_limit="-2.0" soft_upper_limit="0.5" /> -->
+        </joint>
+
+        <link name="${prefix}_calf_link">
+            <visual>
+                <origin rpy="0 ${PI} 0"
+                    xyz="0 0 0" />
+                <geometry>
+                    <mesh filename="package://quadruped_description/meshes/$(arg robot_type)_calf.obj"
+                        scale="1 1 1" />
+                </geometry>
+                <material name="white_blue" />
+            </visual>
+            <collision>
+                <origin rpy="0 0 0"
+                    xyz="0 0 ${-1.0*calf_height / 2}" />
+                <geometry>
+                    <box size="${calf_length} ${calf_width} ${calf_height}" />
+                </geometry>
+            </collision>
+            <inertial>
+                <origin rpy="0 0 0"
+                    xyz="${calf_com_x} ${calf_com_y} ${calf_com_z}" />
+                <mass value="${calf_mass}" />
+                <inertia ixx="${calf_ixx}"
+                    ixy="${calf_ixy}"
+                    ixz="${calf_ixz}"
+                    iyy="${calf_iyy}"
+                    iyz="${calf_iyz}"
+                    izz="${calf_izz}" />
+            </inertial>
+        </link>
+
+
+        <joint name="${prefix}_foot_fixed"
+            type="fixed">
+            <origin rpy="0 0 0"
+                xyz="0 0 -0.18" />
+            <parent link="${prefix}_calf_link" />
+            <child link="${prefix}_foot_link" />
+        </joint>
+
+        <link name="${prefix}_foot_link">
+            <visual>
+                <origin rpy="0 0 0"
+                    xyz="0 0.0 0.0" />
+                <geometry>
+                    <sphere radius="0.025" />
+                </geometry>
+                <material name="white_black" />
+            </visual>
+            <collision>
+                <origin rpy="0 0 0"
+                    xyz="0 0 0.0" />
+                <geometry>
+                    <sphere radius="0.025" />
+                </geometry>
+            </collision>
+            <inertial>
+                <origin rpy="0 0 0"
+                    xyz="${foot_com_x} ${foot_com_y} ${foot_com_z}" />
+                <mass value="${foot_mass}" />
+                <inertia ixx="${(2.0/5.0) * foot_mass * ( (foot_radius) * (foot_radius) )}"
+                    ixy="0"
+                    ixz="0"
+                    iyy="${(2.0/5.0) * foot_mass * ( (foot_radius) * (foot_radius) )}"
+                    iyz="0"
+                    izz="${(2.0/5.0) * foot_mass * ( (foot_radius) * (foot_radius) )}" />
+            </inertial>
+        </link>
+
+        <!-- <xacro:leg_transmission name="${prefix}" /> -->
+        <xacro:if value="$(arg gazebo_control)">
+            <gazebo reference="${prefix}_hip_link">
+                <mu1>0.5</mu1>
+                <mu2>0.5</mu2>
+                <self_collide>1</self_collide>
+                <material>Gazebo/Turquoise</material>
+            </gazebo>
+            <gazebo reference="${prefix}_thigh_link">
+                <mu1>0.5</mu1>
+                <mu2>0.5</mu2>
+                <self_collide>0</self_collide>
+                <material>Gazebo/Turquoise</material>
+            </gazebo>
+            <gazebo reference="${prefix}_calf_link">
+                <mu1>0.5</mu1>
+                <mu2>0.5</mu2>
+                <self_collide>1</self_collide>
+                <material>Gazebo/Turquoise</material>
+            </gazebo>
+            <gazebo reference="RL_foot">
+                <mu1>0.9</mu1>
+                <mu2>0.9</mu2>
+                <self_collide>1</self_collide>
+                <material>Gazebo/DarkGrey</material>
+                <kp value="1000000.0" />
+                <kd value="1.0" />
+            </gazebo>
+            <gazebo reference="${prefix}_foot_fixed">
+                <disableFixedJointLumping>true</disableFixedJointLumping>
+            </gazebo>
+        </xacro:if >
+    </xacro:macro>
+</robot>
