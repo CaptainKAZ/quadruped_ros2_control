@@ -1,5 +1,6 @@
 #include "quadruped_gazebo/gazebo_cheetah_system.hpp"
-
+#include "angles/angles.h"
+#include "gazebo/common/Time.hh"
 // Stupid redefinition of `GazeboSystemPrivate'
 #include "gazebo/sensors/ImuSensor.hh"
 #include "gazebo/sensors/ForceTorqueSensor.hh"
@@ -76,6 +77,8 @@ public:
     ~GazeboCheetahSystemPrivate() = default;
     /// \brief DOF equals to number of joints.
     size_t n_cheetah_joint;
+    /// \brief Gazebo Model Ptr.
+    gazebo::physics::ModelPtr parent_model_;
     /// \brief vector with the joint's names.
     std::vector<std::string> joint_names_;
     /// \brief vector with the current cmd joint position
@@ -193,6 +196,7 @@ namespace quadruped_gazebo
                 }
             }
         }
+        this->dataPtr->parent_model_ = parent_model;
     }
 
     std::vector<hardware_interface::CommandInterface>
@@ -210,6 +214,19 @@ namespace quadruped_gazebo
 
     hardware_interface::return_type GazeboCheetahSystem::write()
     {
+        //count avarge frequency
+        /*
+        gazebo::common::Time gz_time_now = this->dataPtr->parent_model_->GetWorld()->SimTime();
+        static gazebo::common::Time gz_time_last{};
+        static unsigned int gz_count{};
+        if(gz_time_now - gz_time_last > gazebo::common::Time(1,0))
+        {
+            gz_time_last = gz_time_now;
+            RCLCPP_INFO(this->nh_->get_logger(), "Avarge Control Frequency: %d",gz_count);
+            gz_count = 0;
+        }
+        */
+        gz_count++;
         auto ret = GazeboSystem::write();
         if (ret != hardware_interface::return_type::OK)
         {
@@ -217,9 +234,10 @@ namespace quadruped_gazebo
         }
         for (unsigned int j = 0; j < this->dataPtr->n_cheetah_joint; j++)
         {
+            const double ePos=angles::shortest_angular_distance(this->dataPtr->sim_joints_[j]->Position(0), this->dataPtr->joint_position_cmd_[j]);
             // effort=effort_des + kp*(position_des-position_cur) + kd*(velocity_des-velocity_cur);
             const double effort_cmd =
-                this->dataPtr->joint_effort_cmd_[j] + this->dataPtr->joint_kp_cmd_[j] * (this->dataPtr->joint_position_cmd_[j] - this->dataPtr->sim_joints_[j]->Position(0)) + this->dataPtr->joint_kd_cmd_[j] * (this->dataPtr->joint_velocity_cmd_[j] - this->dataPtr->sim_joints_[j]->GetVelocity(0));
+                this->dataPtr->joint_effort_cmd_[j] + this->dataPtr->joint_kp_cmd_[j] * (ePos) + this->dataPtr->joint_kd_cmd_[j] * (this->dataPtr->joint_velocity_cmd_[j] - this->dataPtr->sim_joints_[j]->GetVelocity(0));
             this->dataPtr->sim_joints_[j]->SetForce(0, effort_cmd);
         }
         return hardware_interface::return_type::OK;

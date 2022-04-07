@@ -38,7 +38,8 @@ add_library(gazebo_cheetah_hardware_plugin SHARED
 target_include_directories(gazebo_cheetah_hardware_plugin PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-link_directories(${gazebo_dev_LIBRARY_DIRS} ${gazebo_ros_LIBRARY_DIRS} ${gazebo_ros2_control_LIBRARY_DIRS})
+
+target_link_directories(gazebo_cheetah_hardware_plugin PUBLIC ${gazebo_dev_LIBRARY_DIRS} ${gazebo_ros_LIBRARY_DIRS} ${gazebo_ros2_control_LIBRARY_DIRS} ${angles_LIBRARY_DIRS})
 
 ament_target_dependencies(gazebo_cheetah_hardware_plugin
   angles
@@ -58,7 +59,7 @@ install(
 )
 
 install(
-  DIRECTORY launch config
+  DIRECTORY launch config include
   DESTINATION share/${PROJECT_NAME}
 )
 
