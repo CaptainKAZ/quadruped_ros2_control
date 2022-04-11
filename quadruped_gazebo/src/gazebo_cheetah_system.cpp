@@ -1,6 +1,8 @@
 #include "quadruped_gazebo/gazebo_cheetah_system.hpp"
 #include "angles/angles.h"
 #include "gazebo/common/Time.hh"
+#include "rcutils/logging.h"
+
 // Stupid redefinition of `GazeboSystemPrivate'
 #include "gazebo/sensors/ImuSensor.hh"
 #include "gazebo/sensors/ForceTorqueSensor.hh"
@@ -107,6 +109,8 @@ namespace quadruped_gazebo
         const hardware_interface::HardwareInfo &hardware_info,
         sdf::ElementPtr sdf)
     {
+        rcutils_logging_set_logger_level("pluginlib.ClassLoader",RCUTILS_LOG_SEVERITY_DEBUG);
+        
         RCLCPP_INFO(model_nh->get_logger(), "Initializing GazeboCheetahSystem...");
         this->dataPtr = std::make_unique<GazeboCheetahSystemPrivate>();
         gazebo_ros2_control::GazeboSystem::initSim(model_nh, parent_model, hardware_info, sdf);
@@ -202,9 +206,9 @@ namespace quadruped_gazebo
     std::vector<hardware_interface::CommandInterface>
     GazeboCheetahSystem::export_command_interfaces()
     {
-        //RCLCPP_WARN(this->nh_->get_logger(),"Called export_command_interfaces");
+        // RCLCPP_WARN(this->nh_->get_logger(),"Called export_command_interfaces");
         std::vector<hardware_interface::CommandInterface> command_interfaces = GazeboSystem::export_command_interfaces();
-        for(auto& command_interface : this->dataPtr->cheetah_command_interfaces_)
+        for (auto &command_interface : this->dataPtr->cheetah_command_interfaces_)
         {
             command_interfaces.emplace_back(std::move(command_interface));
         }
@@ -214,7 +218,7 @@ namespace quadruped_gazebo
 
     hardware_interface::return_type GazeboCheetahSystem::write()
     {
-        //count avarge frequency
+        // count avarge frequency
         /*
         gazebo::common::Time gz_time_now = this->dataPtr->parent_model_->GetWorld()->SimTime();
         static gazebo::common::Time gz_time_last{};
@@ -225,8 +229,8 @@ namespace quadruped_gazebo
             RCLCPP_INFO(this->nh_->get_logger(), "Avarge Control Frequency: %d",gz_count);
             gz_count = 0;
         }
-        */
         gz_count++;
+        */
         auto ret = GazeboSystem::write();
         if (ret != hardware_interface::return_type::OK)
         {
@@ -234,7 +238,7 @@ namespace quadruped_gazebo
         }
         for (unsigned int j = 0; j < this->dataPtr->n_cheetah_joint; j++)
         {
-            const double ePos=angles::shortest_angular_distance(this->dataPtr->sim_joints_[j]->Position(0), this->dataPtr->joint_position_cmd_[j]);
+            const double ePos = angles::shortest_angular_distance(this->dataPtr->sim_joints_[j]->Position(0), this->dataPtr->joint_position_cmd_[j]);
             // effort=effort_des + kp*(position_des-position_cur) + kd*(velocity_des-velocity_cur);
             const double effort_cmd =
                 this->dataPtr->joint_effort_cmd_[j] + this->dataPtr->joint_kp_cmd_[j] * (ePos) + this->dataPtr->joint_kd_cmd_[j] * (this->dataPtr->joint_velocity_cmd_[j] - this->dataPtr->sim_joints_[j]->GetVelocity(0));

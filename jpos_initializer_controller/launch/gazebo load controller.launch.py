@@ -35,6 +35,11 @@ def generate_launch_description():
              'joint_state_broadcaster'],
         output='screen'
     )
+    load_jpos_initializer_controller = ExecuteProcess(
+        cmd=['ros2', 'control', 'load_controller', '--set-state', 'start',
+             'jpos_initializer_controller'],
+        output='screen'
+    )
     
     return LaunchDescription([
         gazebo,
@@ -57,6 +62,12 @@ def generate_launch_description():
             event_handler=OnProcessExit(
                 target_action=spawn,
                 on_exit=[load_joint_state_controller],
+            )
+        ),
+        RegisterEventHandler(
+            event_handler=OnProcessExit(
+                target_action=spawn,
+                on_exit=[load_jpos_initializer_controller],
             )
         ),
         # RegisterEventHandler(event_handler=OnProcessExit(on_exit=[EmitEvent(event=Shutdown())],)),

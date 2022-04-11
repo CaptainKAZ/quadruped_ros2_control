@@ -1,0 +1,9 @@
+<library path="jpos_initializer">
+  <class name="jpos_initializer_controller/JPosInitializer"
+    type="jpos_initializer_controller::JPosInitializer"
+    base_class_type="controller_interface::ControllerInterface">
+    <description>
+    JPosInitializer ros2_control controller.
+    </description>
+  </class>
+</library>

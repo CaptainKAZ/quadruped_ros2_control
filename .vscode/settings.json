@@ -43,5 +43,10 @@
         "/home/neo/ros2_ws/build/ros2_control_test_nodes",
         "/home/neo/ros2_ws/install/ros2_control_test_nodes/lib/python3.8/site-packages",
         "/opt/ros/foxy/lib/python3.8/site-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/neo/ros2_ws/build/ros2_control_test_nodes",
+        "/home/neo/ros2_ws/install/ros2_control_test_nodes/lib/python3.8/site-packages",
+        "/opt/ros/foxy/lib/python3.8/site-packages"
     ]
 }

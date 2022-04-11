@@ -4,3 +4,34 @@ controller_manager:
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
+
+    jpos_initializer_controller:
+      type: jpos_initializer_controller/JPosInitializer
+
+jpos_initializer_controller:
+  ros__parameters:
+    cheetah_joints: [
+    'FR_hip_joint', 'FR_thigh_joint', 'FR_calf_joint',
+    'FL_hip_joint', 'FL_thigh_joint', 'FL_calf_joint',
+    'RR_hip_joint', 'RR_thigh_joint', 'RR_calf_joint',
+    'RL_hip_joint', 'RL_thigh_joint', 'RL_calf_joint']
+
+    mid_jpos: [
+    -1.8, 0., 2.7,
+    1.8, 0., 2.7,
+    -1.7, 0.5, 0.5,
+    1.7, 0.5, 0.5]
+
+    target_jpos: [
+    -0.6, -1.0, 2.7,
+    0.6, -1.0, 2.7,
+    -0.6, -1.0, 2.7,
+    0.6, -1.0, 2.7]
+
+    duration: 3.0
+
+    dt: 0.001
+
+    hybrid_kp: 5.0
+
+    hybrid_kd: 0.1
