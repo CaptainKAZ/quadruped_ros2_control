@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 project(quadruped_gazebo)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
   set(CMAKE_C_STANDARD 99)
@@ -30,6 +32,12 @@ find_package(rclcpp REQUIRED)
 find_package(urdf REQUIRED)
 find_package(yaml_cpp_vendor REQUIRED)
 find_package(gazebo_ros2_control REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(urdf REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 add_library(gazebo_cheetah_hardware_plugin SHARED
   src/gazebo_cheetah_system.cpp
@@ -39,8 +47,6 @@ target_include_directories(gazebo_cheetah_hardware_plugin PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 
-target_link_directories(gazebo_cheetah_hardware_plugin PUBLIC ${gazebo_dev_LIBRARY_DIRS} ${gazebo_ros_LIBRARY_DIRS} ${gazebo_ros2_control_LIBRARY_DIRS} ${angles_LIBRARY_DIRS})
-
 ament_target_dependencies(gazebo_cheetah_hardware_plugin
   angles
   gazebo_dev
@@ -48,6 +54,12 @@ ament_target_dependencies(gazebo_cheetah_hardware_plugin
   rclcpp
   gazebo_ros2_control
   pluginlib
+  tf2
+  tf2_msgs
+  nav_msgs
+  geometry_msgs
+  urdf
+  Eigen3
 )
 
 install(
@@ -88,7 +100,7 @@ if(BUILD_TESTING)
   # the following line skips cpplint (only works in a git repo)
   # uncomment the line when this package is not in a git repo
   #set(ament_cmake_cpplint_FOUND TRUE)
-  ament_lint_auto_find_test_dependencies()
+  # ament_lint_auto_find_test_dependencies()
 endif()
 
 install(DIRECTORY include/${PROJECT_NAME}/

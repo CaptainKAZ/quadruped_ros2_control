@@ -1,0 +1,9 @@
+<library path="controller_base">
+  <class name="quadruped_controllers/QuadrupedControllerBase"
+    type="quadruped_controllers::QuadrupedControllerBase"
+    base_class_type="controller_interface::ControllerInterface">
+    <description>
+    QuadrupedControllerBase ros2_control controller.
+    </description>
+  </class>
+</library>

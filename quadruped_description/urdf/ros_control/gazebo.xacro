@@ -34,6 +34,7 @@
             <state_interface name="angular_velocity.z" />
             <param name="frame_id">base_link</param>
         </sensor>
+        
 
     </ros2_control>
 
@@ -64,6 +65,17 @@
                 <pose>0 0 0 0 0 0</pose>
                 <material>Gazebo/Yellow</material>
             </plot>
+        </plugin>
+    </gazebo>
+    <gazebo>
+        <plugin name="p3d_base_controller" filename="libgazebo_ros_p3d.so">
+            <update_rate>100.0</update_rate>
+            <body_name>root</body_name>
+            <remapping>odom:=ground_truth/state</remapping>
+            <gaussian_noise>0</gaussian_noise>
+            <frame_name>world</frame_name>
+            <xyz_offset>0 0 0</xyz_offset>
+            <rpy_offset>0 0 0</rpy_offset>
         </plugin>
     </gazebo>
 

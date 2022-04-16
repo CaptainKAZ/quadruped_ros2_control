@@ -22,7 +22,7 @@ def generate_launch_description():
         PythonLaunchDescriptionSource([os.path.join(
             get_package_share_directory('gazebo_ros'), 'launch'), '/gazebo.launch.py']),
         launch_arguments={'verbose': 'true',
-                          'pause': 'true', 'physics': 'bullet'}.items()
+                          'pause': 'false', 'physics': 'bullet'}.items()
     )
     # Spawn
     spawn = Node(package='gazebo_ros', executable='spawn_entity.py',
@@ -48,11 +48,11 @@ def generate_launch_description():
                 'use_sim_time': True
             }]),
         spawn,
-        Node(
-            package='rviz2',
-            executable='rviz2',
-            name='rviz2',
-            output='log'),
+        # Node(
+        #     package='rviz2',
+        #     executable='rviz2',
+        #     name='rviz2',
+        #     output='log'),
         RegisterEventHandler(
             event_handler=OnProcessExit(
                 target_action=spawn,

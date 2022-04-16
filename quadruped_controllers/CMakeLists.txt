@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(jpos_initializer_controller)
+project(quadruped_controllers)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -20,36 +20,46 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(control_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(controller_interface REQUIRED)
 find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(realtime_tools REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_msgs REQUIRED)
 
-find_package(tinysplinecxx REQUIRED)
-# rename the following to let ament cmake find it
-set(tinysplinecxx_LIBRARY_DIRS ${TINYSPLINECXX_LIBRARY_DIRS})
-set(tinysplinecxx_INCLUDE_DIRS ${TINYSPLINECXX_INCLUDE_DIRS})
-set(tinysplinecxx_LIBRARIES ${TINYSPLINECXX_LIBRARIES})
-set(tinysplinecxx_DEFINITIONS ${TINYSPLINECXX_DEFINITIONS})
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(pinocchio REQUIRED pinocchio)
+
+set(FLAGS
+        ${pinocchio_CFLAGS_OTHER}
+        -Wno-ignored-attributes
+        -Wno-maybe-uninitialized
+        -DPINOCCHIO_URDFDOM_TYPEDEF_SHARED_PTR
+        -DPINOCCHIO_URDFDOM_USE_STD_SHARED_PTR
+        )
 
 add_library(
-  jpos_initializer
+  controller_base
   SHARED
-  src/jpos_initializer.cpp
+  src/controller_base.cpp src/state_update.cpp src/pinocchio_solver.cpp src/ros2_node_interface.cpp
 )
-
 target_include_directories(
-  jpos_initializer
+  controller_base
   PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
-
 ament_target_dependencies(
-  jpos_initializer
-  tinysplinecxx
+  controller_base
+  nav_msgs
+  geometry_msgs
+  pinocchio
+  tf2
+  tf2_msgs
   control_msgs
   controller_interface
   hardware_interface
@@ -58,17 +68,15 @@ ament_target_dependencies(
   rclcpp_lifecycle
   realtime_tools
 )
-
 # prevent pluginlib from using boost
-# target_compile_definitions(jpos_initializer PUBLIC "PLUGINLIB__DISABLE_BOOST_FUNCTIONS")
+target_compile_definitions(controller_base PUBLIC "PLUGINLIB__DISABLE_BOOST_FUNCTIONS")
 
 pluginlib_export_plugin_description_file(
-  controller_interface jpos_initializer_controller.xml)
+  controller_interface quadruped_controllers.xml)
 
 install(
   TARGETS
-  jpos_initializer
-  EXPORT export_${PROJECT_NAME}
+  controller_base
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
@@ -76,12 +84,7 @@ install(
 
 install(
   DIRECTORY include/
-  DESTINATION share/${PROJECT_NAME}
-)
-
-install(
-  FILES jpos_initializer_controller.xml
-  DESTINATION share/${PROJECT_NAME}
+  DESTINATION include
 )
 
 if(BUILD_TESTING)
@@ -97,20 +100,20 @@ if(BUILD_TESTING)
   find_package(hardware_interface REQUIRED)
   find_package(ros2_control_test_assets REQUIRED)
 
-  ament_add_gmock(test_load_jpos_initializer test/test_load_jpos_initializer.cpp)
-  target_include_directories(test_load_jpos_initializer PRIVATE include)
+  ament_add_gmock(test_load_controller_base test/test_load_controller_base.cpp)
+  target_include_directories(test_load_controller_base PRIVATE include)
   ament_target_dependencies(
-    test_load_jpos_initializer
+    test_load_controller_base
     controller_manager
     hardware_interface
     ros2_control_test_assets
   )
 
-  # ament_add_gmock(test_jpos_initializer test/test_jpos_initializer.cpp)
-  # target_include_directories(test_jpos_initializer PRIVATE include)
-  # target_link_libraries(test_jpos_initializer jpos_initializer)
+  # ament_add_gmock(test_controller_base test/test_controller_base.cpp)
+  # target_include_directories(test_controller_base PRIVATE include)
+  # target_link_libraries(test_controller_base controller_base)
   # ament_target_dependencies(
-  #   test_jpos_initializer
+  #   test_controller_base
   #   controller_interface
   #   hardware_interface
   # )
@@ -120,10 +123,7 @@ ament_export_include_directories(
   include
 )
 ament_export_libraries(
-  jpos_initializer
-)
-ament_export_targets(
-  export_${PROJECT_NAME}
+  controller_base
 )
 ament_export_dependencies(
   control_msgs
@@ -135,8 +135,6 @@ ament_export_dependencies(
   realtime_tools
 )
 
-install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION include/${PROJECT_NAME}
-)
+target_compile_options(controller_base PUBLIC ${FLAGS})
 
 ament_package()

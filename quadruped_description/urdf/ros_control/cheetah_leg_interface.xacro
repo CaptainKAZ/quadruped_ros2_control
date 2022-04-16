@@ -62,5 +62,9 @@
             <state_interface name="effort" />
             <param name="joint_type">cheetah</param>
         </joint>
+        <sensor name="${prefix}_contact_sensor">
+            <state_interface name="contact" size="1" data_type="bool"/>
+            <param name="link">${prefix}_foot</param>
+        </sensor>
     </xacro:macro>
 </robot>

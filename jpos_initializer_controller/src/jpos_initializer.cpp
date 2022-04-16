@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 
+
 #include "jpos_initializer_controller/jpos_initializer.hpp"
 #include "controller_interface/helpers.hpp"
 
@@ -221,7 +222,7 @@ namespace jpos_initializer_controller
     {
       init_jpos_[i] = state_interfaces_[i].get_value();
     }
-    start_time_ = rclcpp::Clock().now();
+    start_time_ = node_->get_clock()->now();
     last_update_time_ = start_time_;
 
     spline_ = tinyspline::BSpline(7, cheetah_joint_names_.size(), 3, tinyspline::BSpline::Type::Clamped);
@@ -253,7 +254,7 @@ namespace jpos_initializer_controller
 
   controller_interface::return_type JPosInitializer::update()
   {
-    auto now = rclcpp::Clock().now();
+    auto now = node_->get_clock()->now();
     if ((now - last_update_time_).seconds() > dt_)
     {
       last_update_time_ = now;

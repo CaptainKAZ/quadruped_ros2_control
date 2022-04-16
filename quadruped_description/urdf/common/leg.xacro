@@ -226,7 +226,7 @@
                 <self_collide>1</self_collide>
                 <material>Gazebo/Turquoise</material>
             </gazebo>
-            <gazebo reference="RL_foot">
+            <gazebo reference="${prefix}_foot">
                 <mu1>0.9</mu1>
                 <mu2>0.9</mu2>
                 <self_collide>1</self_collide>

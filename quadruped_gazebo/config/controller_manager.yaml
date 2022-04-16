@@ -8,6 +8,9 @@ controller_manager:
     jpos_initializer_controller:
       type: jpos_initializer_controller/JPosInitializer
 
+    controller_base:
+      type: quadruped_controllers/QuadrupedControllerBase
+
 jpos_initializer_controller:
   ros__parameters:
     cheetah_joints: [
