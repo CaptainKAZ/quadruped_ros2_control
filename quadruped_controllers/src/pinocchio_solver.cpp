@@ -1,4 +1,5 @@
 #include "quadruped_controllers/pinocchio_solver.hpp"
+#include "Eigen/src/Core/Matrix.h"
 #include "quadruped_controllers/quadruped_types.hpp"
 
 #include <cstddef>
@@ -42,6 +43,8 @@ void PinocchioSolver::getFootPosVel(std::shared_ptr<QuadrupedState>& state) {
 void PinocchioSolver::getJacobian(const std::string &leg,
                                   Eigen::Matrix<double, 6, 18> &jacobian) {
   pinocchio::computeJointJacobians(*pin_model_, *pin_data_);
+  rcpputils::check_true(pin_model_->existFrame(leg + "_foot_link"),
+                        leg + "_foot_link does not exist");
   pinocchio::getFrameJacobian(*pin_model_, *pin_data_,
                               pin_model_->getFrameId(leg + "_foot_link"),
                               pinocchio::ReferenceFrame::LOCAL_WORLD_ALIGNED,
@@ -50,5 +53,12 @@ void PinocchioSolver::getJacobian(const std::string &leg,
 
 size_t PinocchioSolver::getNq() const { return pin_model_->nq; }
 size_t PinocchioSolver::getNv() const { return pin_model_->nv; }
+
+const Eigen::Vector3d& PinocchioSolver::getHipLocationRef(size_t leg){
+  rcpputils::check_true(pin_model_->existJointName(LEG_CONFIG[leg] + "_hip_joint"),
+                        LEG_CONFIG[leg] + "_hip_link does not exist");
+  pinocchio::JointIndex joint_id =pin_model_->getFrameId(LEG_CONFIG[leg] + "_hip_joint");
+  return (pin_data_->liMi[joint_id]).translation();
+}
 
 } // namespace quadruped_controllers

@@ -30,6 +30,10 @@ find_package(rclcpp_lifecycle REQUIRED)
 find_package(realtime_tools REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_msgs REQUIRED)
+find_package(qpoases_vendor REQUIRED)
+
+# temporary workaound to fix qpoases_vender bug
+set (qpoases_vendor_LIBRARIES /opt/ros/foxy/lib/libqpOASES.a)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(pinocchio REQUIRED pinocchio)
@@ -68,11 +72,76 @@ ament_target_dependencies(
   rclcpp_lifecycle
   realtime_tools
 )
+
+add_library(swing_stance_controller
+  SHARED
+  src/swing_stance_controller.cpp
+)
+
+target_include_directories(
+  swing_stance_controller
+  PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+
+ament_target_dependencies(
+  swing_stance_controller
+  nav_msgs
+  geometry_msgs
+  pinocchio
+  tf2
+  tf2_msgs
+  control_msgs
+  controller_interface
+  hardware_interface
+  pluginlib
+  rclcpp
+  rclcpp_lifecycle
+  realtime_tools
+)
+
+# standup controller
+add_library(stand_up_controller
+  SHARED
+  src/stand_up_controller.cpp src/controller_base.cpp src/state_update.cpp src/pinocchio_solver.cpp src/ros2_node_interface.cpp
+)
+
+target_include_directories(
+  stand_up_controller
+  PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+
+ament_target_dependencies(
+  stand_up_controller
+  nav_msgs
+  geometry_msgs
+  pinocchio
+  tf2
+  tf2_msgs
+  control_msgs
+  controller_interface
+  hardware_interface
+  pluginlib
+  rclcpp
+  rclcpp_lifecycle
+  realtime_tools
+)
+
+
+
 # prevent pluginlib from using boost
 target_compile_definitions(controller_base PUBLIC "PLUGINLIB__DISABLE_BOOST_FUNCTIONS")
 
 pluginlib_export_plugin_description_file(
-  controller_interface quadruped_controllers.xml)
+  controller_interface controller_base.xml)
+pluginlib_export_plugin_description_file(
+    controller_interface swing_stance_controller.xml)
+
+pluginlib_export_plugin_description_file(
+    controller_interface stand_up_controller.xml)
 
 install(
   TARGETS
@@ -81,6 +150,23 @@ install(
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
 )
+
+install(
+  TARGETS
+  stand_up_controller
+  RUNTIME DESTINATION bin
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+)
+
+install(
+  TARGETS
+  swing_stance_controller
+  RUNTIME DESTINATION bin
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+)
+
 
 install(
   DIRECTORY include/
@@ -124,6 +210,8 @@ ament_export_include_directories(
 )
 ament_export_libraries(
   controller_base
+  swing_stance_controller
+  stand_up_controller
 )
 ament_export_dependencies(
   control_msgs
@@ -136,5 +224,6 @@ ament_export_dependencies(
 )
 
 target_compile_options(controller_base PUBLIC ${FLAGS})
+target_compile_options(stand_up_controller PUBLIC ${FLAGS})
 
 ament_package()

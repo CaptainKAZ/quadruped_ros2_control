@@ -91,13 +91,15 @@ void TwistSubscriber::update(const rclcpp::Time &current_time) {
   last_time_ = current_time;
   command_->linear_vel_(0) = last_msg->twist.linear.x;
   command_->linear_vel_(1) = last_msg->twist.linear.y;
-  command_->linear_vel_(2) = last_msg->twist.linear.z;
+  //cant set z velocity by twist message
+  command_->linear_vel_(2) = 0;
   command_->angular_vel_(0) = 0;
   command_->angular_vel_(1) = 0;
   command_->angular_vel_(2) = last_msg->twist.angular.z;
-  command_->xyz_(0) = state_->pos_(0) + dt * command_->linear_vel_(0);
-  command_->xyz_(1) = state_->pos_(1) + dt * command_->linear_vel_(1);
-  command_->xyz_(2) = state_->pos_(2) + dt * command_->linear_vel_(2);
+  auto v_des_world=state_->quat_.toRotationMatrix()*command_->linear_vel_;
+  command_->xyz_(0) = state_->pos_(0) + dt * v_des_world(0);
+  command_->xyz_(1) = state_->pos_(1) + dt * v_des_world(1);
+  command_->xyz_(2) = 0;
   command_->rpy_(0) = 0;
   command_->rpy_(1) = 0;
   command_->rpy_(2) = state_->quat_.toRotationMatrix().eulerAngles(2, 1, 0)(2) +

@@ -60,11 +60,11 @@ QuadrupedControllerBase::init(const std::string &controller_name) {
 
 CallbackReturn QuadrupedControllerBase::on_configure(
     const rclcpp_lifecycle::State & /*previous_state*/) {
-  solver_ = std::make_shared<PinocchioSolver>(urdf_);
+  kine_solver_ = std::make_shared<PinocchioSolver>(urdf_);
   leg_controller_ =
-      std::make_shared<LegController>(interface_, solver_, state_);
+      std::make_shared<LegController>(interface_, kine_solver_, state_);
   kinematic_solver_update_ =
-      std::make_shared<KinematicSolverStateUpdate>(get_node(), state_, solver_);
+      std::make_shared<KinematicSolverStateUpdate>(get_node(), state_, kine_solver_);
 
   return CallbackReturn::SUCCESS;
 }
@@ -97,15 +97,18 @@ CallbackReturn QuadrupedControllerBase::on_activate(
   // enable in cheater mode
   // state_updater_queue_.push_back(from_ground_truth_update_);
   RCLCPP_INFO(get_node()->get_logger(), "Activated!!!!!!");
+  start_time_ = get_node()->now();
   return CallbackReturn::SUCCESS;
 }
 
 CallbackReturn QuadrupedControllerBase::on_deactivate(
     const rclcpp_lifecycle::State & /*previous_state*/) {
+  interface_->releaseInterfaces();
   return CallbackReturn::SUCCESS;
 }
 
 controller_interface::return_type QuadrupedControllerBase::update() {
+  //RCLCPP_INFO(get_node()->get_logger(), "Looping...");
   for (auto &ros2Interface : ros2_node_interface_queue_) {
     ros2Interface->update(get_node()->get_clock()->now());
   }
@@ -113,6 +116,7 @@ controller_interface::return_type QuadrupedControllerBase::update() {
     updater->update(get_node()->get_clock()->now());
   }
   leg_controller_->writeInterface();
+  //print_state();
   return controller_interface::return_type::OK;
 }
 
@@ -168,6 +172,30 @@ void QuadrupedControllerBase::updateURDFModel(const std::string &from_node_name,
   RCLCPP_INFO(get_node()->get_logger(),
               "Recieved urdf from param server, parsing...");
   urdf_ = urdf::parseURDF(urdf_string);
+}
+
+void QuadrupedControllerBase::print_state() {
+  RCLCPP_INFO_STREAM(get_node()->get_logger(),
+                     std::endl
+                         << "------------state:--------------\n"
+                         << "update_time" << (state_->update_time_-start_time_).seconds()
+                         << "\n"
+                         << "quat:\n"
+                         << state_->quat_.coeffs().transpose() << "\n"
+                         << "pos:\n"
+                         << state_->pos_.transpose() << "\n"
+                         << "vel:\n"
+                         << state_->linear_vel_.transpose() << "\n"
+                         << "acc:\n"
+                         << state_->accel_.transpose() << "\n"
+                         << "omega:\n"
+                         << state_->angular_vel_.transpose() << "\n"
+                         << "contact:\n"
+                         << state_->contact_state_[0] << ","
+                         << state_->contact_state_[1] << ","
+                         << state_->contact_state_[2] << ","
+                         << state_->contact_state_[3] << "\n"
+                         << "----------end of state----------");
 }
 
 } // namespace quadruped_controllers

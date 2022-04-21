@@ -15,6 +15,7 @@
 #pragma once
 
 #include <memory>
+#include <rclcpp/time.hpp>
 #include <string>
 #include <urdf/model.h>
 #include <vector>
@@ -62,13 +63,16 @@ public:
   QUADRUPED_CONTROLLERS_PUBLIC
   controller_interface::return_type update() override;
 
+  QUADRUPED_CONTROLLERS_PUBLIC
+  void print_state();
+
 protected:
   void updateURDFModel(const std::string& from_node_name,const std::string& param_name);
   std::shared_ptr<urdf::ModelInterface> urdf_;
   std::shared_ptr<QuadrupedState> state_;
   std::shared_ptr<QuadrupedCommand> command_;
   std::shared_ptr<QuadrupedInterface> interface_;
-  std::shared_ptr<PinocchioSolver> solver_;
+  std::shared_ptr<PinocchioSolver> kine_solver_;
   std::shared_ptr<LegController> leg_controller_;
   std::shared_ptr<InterfaceStateUpdate> interface_update_;
   std::shared_ptr<FromGroundTruthStateUpdate> from_ground_truth_update_;
@@ -76,6 +80,7 @@ protected:
   std::shared_ptr<LinearKFPosVelEstimateUpdate> linear_kf_pos_vel_update_;
   std::vector<std::shared_ptr<StateUpdateBase>> state_updater_queue_;
   std::vector<std::shared_ptr<Ros2NodeInterfaceBase>> ros2_node_interface_queue_;
+  rclcpp::Time start_time_;
 };
 
 }  // namespace quadruped_controllers

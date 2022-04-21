@@ -58,7 +58,7 @@ public:
     height_ = h;
   }
 
-  void computeSwingTrajectoryBezier(T phase, T swing_time);
+  void computeSwingTrajectoryBezier(T phase, T swing_duration);
 
   /*!
    * Get the foot position at the current point along the swing

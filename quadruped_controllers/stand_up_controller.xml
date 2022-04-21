@@ -1,0 +1,9 @@
+<library path="stand_up_controller">
+  <class name="quadruped_controllers/QuadrupedStandUpController"
+    type="quadruped_controllers::QuadrupedStandUpController"
+    base_class_type="controller_interface::ControllerInterface">
+    <description>
+    QuadrupedSwingStanceController ros2_control controller.
+    </description>
+  </class>
+</library>

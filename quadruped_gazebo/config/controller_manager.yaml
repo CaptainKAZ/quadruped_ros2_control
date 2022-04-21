@@ -11,6 +11,9 @@ controller_manager:
     controller_base:
       type: quadruped_controllers/QuadrupedControllerBase
 
+    stand_up_controller:
+      type: quadruped_controllers/QuadrupedStandUpController
+
 jpos_initializer_controller:
   ros__parameters:
     cheetah_joints: [

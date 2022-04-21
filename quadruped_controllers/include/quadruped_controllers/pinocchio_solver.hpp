@@ -25,6 +25,7 @@ class PinocchioSolver{
     void getJacobian(const std::string& leg,Eigen::Matrix<double, 6, 18>& jacobian);
     size_t getNq() const;
     size_t getNv() const;
+    const Eigen::Vector3d& getHipLocationRef(size_t leg);
   protected:
     std::shared_ptr<pinocchio::Model> pin_model_;
     std::shared_ptr<pinocchio::Data> pin_data_;
