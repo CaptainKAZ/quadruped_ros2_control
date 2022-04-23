@@ -14,6 +14,11 @@ controller_manager:
     stand_up_controller:
       type: quadruped_controllers/QuadrupedStandUpController
 
+    locomotion_controller:
+      type: quadruped_controllers/QuadrupedLocomotionController
+    
+    use_sim_time: true
+
 jpos_initializer_controller:
   ros__parameters:
     cheetah_joints: [
@@ -41,3 +46,49 @@ jpos_initializer_controller:
     hybrid_kp: 5.0
 
     hybrid_kd: 0.1
+
+locomotion_controller:
+  ros__parameters:
+    kp_stance: [
+      100.,0.,0.,
+      0.,100.,0.,
+      0.,0.,0.]
+
+    kd_stance: [
+      7.,0.,0.,
+      0.,7.,0.,
+      0.,0.,7.]
+
+    kp_swing: [
+      700., 0., 0.,
+      0., 700., 0.,
+      0., 0., 150.]
+
+    kd_swing: [
+      7.,0.,0.,
+      0.,7.,0.,
+      0.,0.,7.]
+
+    locomotion:
+      gait:
+        name: ["stand","tort","cat"]
+        current: "stand"
+        stand:
+          cycle: 0.18
+          offsets: [0.,0.,0.,0.]
+          durations: [1.0,1.0,1.0,1.0]
+        tort:
+          cycle: 0.18
+          offsets: [0.,0.5,0.5,0.]
+          durations: [0.5,0.5,0.5,0.5]
+        cat:
+          cycle: 0.18
+          offsets: [0.,0.25,0.50,0.75]
+          durations: [0.75,0.75,0.75,0.75]
+
+    use_sim_time: true
+
+    mpc:
+      dt: 0.02
+
+      horizon: 9

@@ -3,6 +3,7 @@
 #include "quadruped_controllers/gait.hpp"
 #include "quadruped_controllers/mpc_solver.hpp"
 #include "quadruped_controllers/swing_stance_controller.hpp"
+#include <atomic>
 
 namespace quadruped_controllers {
 class QuadrupedMpcController : public QuadrupedSwingStanceController {
@@ -15,6 +16,9 @@ public:
   on_configure(const rclcpp_lifecycle::State &previous_state) override;
   QUADRUPED_CONTROLLERS_PUBLIC
   controller_interface::return_type update() override;
+  QUADRUPED_CONTROLLERS_PUBLIC
+  CallbackReturn
+  on_activate(const rclcpp_lifecycle::State &previous_state) override;
 
 protected:
   void setTraj(const Eigen::VectorXd &traj);
@@ -23,8 +27,6 @@ protected:
   Eigen::VectorXd gait_table_;
   Eigen::VectorXd traj_;
   std::shared_ptr<MpcSolverBase> mpc_solver_;
-  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr
-      mpc_param_callback_handle_;
   struct SolverConfig {
     struct SolverWeight {
       double ori_roll_;
@@ -44,5 +46,11 @@ protected:
     int horizon_;
     double dt_;
   } mpc_config_;
+
+private:
+  std::atomic<bool> need_update_param_{true};
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr
+      mpc_param_callback_handle_;
+  bool updateParam(void);
 };
 } // namespace quadruped_controllers

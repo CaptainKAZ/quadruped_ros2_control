@@ -17,6 +17,7 @@
 #include <limits>
 #include <memory>
 #include <rclcpp/logging.hpp>
+#include <sstream>
 #include <string>
 #include <urdf_parser/urdf_parser.h>
 #include <vector>
@@ -24,6 +25,7 @@
 #include "quadruped_controllers/controller_base.hpp"
 #include "quadruped_controllers/quadruped_types.hpp"
 #include "quadruped_controllers/ros2_node_interface.hpp"
+#include "quadruped_controllers/utils.hpp"
 
 namespace quadruped_controllers {
 QuadrupedControllerBase::QuadrupedControllerBase()
@@ -95,7 +97,7 @@ CallbackReturn QuadrupedControllerBase::on_activate(
   state_updater_queue_.push_back(linear_kf_pos_vel_update_);
   state_updater_queue_.push_back(kinematic_solver_update_);
   // enable in cheater mode
-  // state_updater_queue_.push_back(from_ground_truth_update_);
+  //state_updater_queue_.push_back(from_ground_truth_update_);
   RCLCPP_INFO(get_node()->get_logger(), "Activated!!!!!!");
   start_time_ = get_node()->now();
   return CallbackReturn::SUCCESS;
@@ -109,14 +111,24 @@ CallbackReturn QuadrupedControllerBase::on_deactivate(
 
 controller_interface::return_type QuadrupedControllerBase::update() {
   //RCLCPP_INFO(get_node()->get_logger(), "Looping...");
+  //Timer timer;
+  //Timer total_timer;
   for (auto &ros2Interface : ros2_node_interface_queue_) {
     ros2Interface->update(get_node()->get_clock()->now());
   }
+  //RCLCPP_INFO(get_node()->get_logger(), "Ros2 Interface time: %f ms", timer.toc()*1000);
+  //timer.tic();
   for (auto &updater : state_updater_queue_) {
     updater->update(get_node()->get_clock()->now());
   }
+  //RCLCPP_INFO(get_node()->get_logger(), "State Updater time: %f ms", timer.toc()*1000);
+  //timer.tic();
   leg_controller_->writeInterface();
+  //RCLCPP_INFO(get_node()->get_logger(), "Write Interface time: %f ms", timer.toc()*1000);
+  //timer.tic();
   //print_state();
+  //RCLCPP_INFO(get_node()->get_logger(), "Print State time: %f ms", timer.toc()*1000);
+  //RCLCPP_INFO(get_node()->get_logger(), "Total time: %f ms", total_timer.toc()*1000);
   return controller_interface::return_type::OK;
 }
 
@@ -175,8 +187,8 @@ void QuadrupedControllerBase::updateURDFModel(const std::string &from_node_name,
 }
 
 void QuadrupedControllerBase::print_state() {
-  RCLCPP_INFO_STREAM(get_node()->get_logger(),
-                     std::endl
+  std::ostringstream oss;
+  oss<<std::endl
                          << "------------state:--------------\n"
                          << "update_time" << (state_->update_time_-start_time_).seconds()
                          << "\n"
@@ -195,7 +207,14 @@ void QuadrupedControllerBase::print_state() {
                          << state_->contact_state_[1] << ","
                          << state_->contact_state_[2] << ","
                          << state_->contact_state_[3] << "\n"
-                         << "----------end of state----------");
+                         << "foot_pos:\n"
+                          << state_->foot_pos_[0].transpose() << "\n"
+                          << state_->foot_pos_[1].transpose() << "\n"
+                          << state_->foot_pos_[2].transpose() << "\n"
+                          << state_->foot_pos_[3].transpose() << "\n"
+                         << "----------end of state----------";
+  RCLCPP_INFO(get_node()->get_logger(),
+                    oss.str().c_str() );
 }
 
 } // namespace quadruped_controllers

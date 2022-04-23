@@ -1,5 +1,6 @@
 #pragma once
 #include "quadruped_controllers/quadruped_types.hpp"
+#include <chrono>
 
 template <typename T>
 inline T square(T a)
@@ -44,3 +45,19 @@ template <typename T> Eigen::Quaternion<T> RpyToQuat(Vec3<T> rpy) {
 
   return q;
 }
+
+class Timer{
+  public:
+    Timer(){
+      tic();
+    }
+    inline void tic(){
+      start_time_ = std::chrono::high_resolution_clock::now();
+    }
+    inline double toc(){
+      return std::chrono::duration_cast<std::chrono::duration<double>>(
+          std::chrono::high_resolution_clock::now() - start_time_).count();
+    }
+  private:
+    std::chrono::time_point<std::chrono::high_resolution_clock> start_time_;
+};

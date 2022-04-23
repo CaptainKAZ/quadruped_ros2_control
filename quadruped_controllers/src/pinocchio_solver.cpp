@@ -57,8 +57,15 @@ size_t PinocchioSolver::getNv() const { return pin_model_->nv; }
 const Eigen::Vector3d& PinocchioSolver::getHipLocationRef(size_t leg){
   rcpputils::check_true(pin_model_->existJointName(LEG_CONFIG[leg] + "_hip_joint"),
                         LEG_CONFIG[leg] + "_hip_link does not exist");
-  pinocchio::JointIndex joint_id =pin_model_->getFrameId(LEG_CONFIG[leg] + "_hip_joint");
+  pinocchio::JointIndex joint_id =pin_model_->getJointId(LEG_CONFIG[leg] + "_hip_joint");
   return (pin_data_->liMi[joint_id]).translation();
+}
+
+const Eigen::Vector3d& PinocchioSolver::getHipLocationWorld(size_t leg){
+  rcpputils::check_true(pin_model_->existJointName(LEG_CONFIG[leg] + "_hip_joint"),
+                        LEG_CONFIG[leg] + "_hip_link does not exist");
+  pinocchio::JointIndex joint_id =pin_model_->getJointId(LEG_CONFIG[leg] + "_hip_joint");
+  return (pin_data_->oMi[joint_id]).translation();
 }
 
 } // namespace quadruped_controllers

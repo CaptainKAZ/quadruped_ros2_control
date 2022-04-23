@@ -71,7 +71,7 @@ install(
 )
 
 install(
-  DIRECTORY launch config include
+  DIRECTORY launch config include worlds
   DESTINATION share/${PROJECT_NAME}
 )
 

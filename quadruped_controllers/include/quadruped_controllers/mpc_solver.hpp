@@ -4,7 +4,9 @@
 #include "qpOASES.hpp"
 #include "quadruped_controllers/mpc_formulation.hpp"
 #include "quadruped_controllers/quadruped_types.hpp"
+#include "quadruped_controllers/utils.hpp"
 #include "rcutils/logging_macros.h"
+#include <cstdio>
 #include <iostream>
 #include <mutex>
 #include <rclcpp/time.hpp>
@@ -45,8 +47,13 @@ public:
   void solve(rclcpp::Time time, const std::shared_ptr<QuadrupedState> &state,
              const VectorXd &gait_table,
              const Matrix<double, Dynamic, 1> &traj) {
-    double dt = (time - last_update_).seconds();
-
+    double dt ;
+    try{
+    dt= (time - last_update_).seconds();
+    }catch (std::exception &e){
+      std::cout << "exception caught: " << e.what() << std::endl;
+      dt=-1.0;
+    }
     if (dt < 0) // Simulation reset
       last_update_ = time;
     if (dt > dt_) {
@@ -96,13 +103,27 @@ protected:
 
 private:
   void formulate() {
+    //Timer timer;
     mpc_formulation_.buildStateSpace(mass_, inertia_, state_);
+    // std::cout<<"cost "<<timer.toc()*1000<<"ms to build state space"<<std::endl;
+    // timer.tic();
     mpc_formulation_.buildQp(dt_);
+    //std::cout<<"cost "<<timer.toc()*1000<<"ms to build Qp"<<std::endl;
+    // timer.tic();
     mpc_formulation_.buildHessianMat();
+    // std::cout<<"cost "<<timer.toc()*1000<<"ms to build HessianMat"<<std::endl;
+    // timer.tic();
     mpc_formulation_.buildGVec(gravity_, state_, traj_);
+    // std::cout<<"cost "<<timer.toc()*1000<<"ms to build GVec"<<std::endl;
+    // timer.tic();
     mpc_formulation_.buildConstrainMat(mu_);
+    // std::cout<<"cost "<<timer.toc()*1000<<"ms to build ConstrainMat"<<std::endl;
+    // timer.tic();
     mpc_formulation_.buildConstrainUpperBound(f_max_, gait_table_);
+    // std::cout<<"cost "<<timer.toc()*1000<<"ms to build ConstrainUpperBound"<<std::endl;
+    // timer.tic();
     mpc_formulation_.buildConstrainLowerBound();
+    //std::cout<<"cost "<<timer.toc()*1000<<"ms to build lower bound"<<std::endl;
   }
 
   rclcpp::Time last_update_;
@@ -126,6 +147,7 @@ public:
 
 protected:
   void solving() override {
+    //Timer timer;
     auto qp_problem = qpOASES::QProblem(
         12 * mpc_formulation_.horizon_,
         20 * mpc_formulation_.horizon_); // TODO: Test SQProblem
@@ -162,6 +184,7 @@ protected:
         std::cerr << solution_[leg];
       }
     }
+    //std::cout<<"cost "<<timer.toc()*1000<<"ms to solve"<<std::endl;
   }
 
   void printFailedInit(qpOASES::returnValue rvalue) {

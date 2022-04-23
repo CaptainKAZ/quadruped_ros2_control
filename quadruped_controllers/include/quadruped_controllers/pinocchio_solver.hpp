@@ -26,6 +26,7 @@ class PinocchioSolver{
     size_t getNq() const;
     size_t getNv() const;
     const Eigen::Vector3d& getHipLocationRef(size_t leg);
+    const Eigen::Vector3d& getHipLocationWorld(size_t leg);
   protected:
     std::shared_ptr<pinocchio::Model> pin_model_;
     std::shared_ptr<pinocchio::Data> pin_data_;

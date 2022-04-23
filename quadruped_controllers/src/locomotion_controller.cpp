@@ -1,7 +1,12 @@
 #include "quadruped_controllers/locomotion_controller.hpp"
 #include "Eigen/src/Core/Matrix.h"
+#include "quadruped_controllers/controller_base.hpp"
 #include "quadruped_controllers/mpc_controller.hpp"
+#include "quadruped_controllers/quadruped_types.hpp"
 #include <controller_interface/controller_interface.hpp>
+#include <cstddef>
+#include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -31,38 +36,113 @@ QuadrupedLocomotionController::init(const std::string &controller_name) {
                    "offsets and durations must have the same size 4");
       return controller_interface::return_type::ERROR;
     }
+    Vec4<double> offsetsVec;
+    offsetsVec << offsets[0], offsets[1], offsets[2], offsets[3];
+    Vec4<double> durationsVec;
+    durationsVec << durations[0], durations[1], durations[2], durations[3];
     gaits_.emplace(name, std::make_shared<OffsetDurationGait<double>>(
-                             cycle, offsets, durations));
+                             cycle, offsetsVec, durationsVec));
   }
-  current_gait_ = gaits_.at(gait_names[0]);
+  std::string current =
+      auto_declare<std::string>("locomotion.gait.current", {});
+  try {
+    current_gait_ = gaits_.at(current);
+  } catch (const std::out_of_range &e) {
+    RCLCPP_ERROR(get_node()->get_logger(), "current gait %s is not found",
+                 current.c_str());
+    return controller_interface::return_type::ERROR;
+  }
+  std::fill(std::begin(first_swing_), std::end(first_swing_), true);
   return controller_interface::return_type::OK;
 }
 
+CallbackReturn QuadrupedLocomotionController::on_configure(
+    const rclcpp_lifecycle::State &previous_state) {
+  auto ret = QuadrupedMpcController::on_configure(previous_state);
+  if (ret != CallbackReturn::SUCCESS) {
+    return ret;
+  }
+  p3d_pub_=std::make_shared<P3dPublisher>(get_node(),state_,command_);
+  need_update_param_ = false;
+  auto locomotion_param_callback_handle =
+      [this](std::vector<rclcpp::Parameter> params) {
+        auto result = rcl_interfaces::msg::SetParametersResult();
+        result.successful = true;
+        for (const auto &param : params) {
+          if (param.get_name() == "locomotion.gait.current") {
+            if(gaits_.find(param.get_value<std::string>()) == gaits_.end()) {
+              RCLCPP_ERROR(get_node()->get_logger(),
+                           "current gait %s is not found",
+                           param.get_value<std::string>().c_str());
+              result.successful = false;
+              result.reason = "current gait is not found";
+              break;
+            }else {
+              need_update_param_=true;
+            }
+          } else if (param.get_name().find("locomotion.gait.") !=
+                     std::string::npos) {
+            result.successful = false;
+            result.reason = "not allow to set gait parameters by now";
+          }
+        }
+        return result;
+      };
+  locomotion_param_callback_handle_=node_->add_on_set_parameters_callback(locomotion_param_callback_handle);
+  return CallbackReturn::SUCCESS;
+}
+
 controller_interface::return_type QuadrupedLocomotionController::update() {
+  if (need_update_param_) {
+    need_update_param_ = false;
+    try{
+    current_gait_ = gaits_.at(node_->get_parameter("locomotion.gait.current").get_value<std::string>());
+    }catch(const std::out_of_range &e){
+      RCLCPP_ERROR(get_node()->get_logger(), "current gait %s is not found",
+                   node_->get_parameter("locomotion.gait.current").get_value<std::string>().c_str());
+      return controller_interface::return_type::ERROR;
+    }
+  }
   Eigen::VectorXd traj;
-  setTraj(calcTrajFromCommand(traj));
+  // setTraj(calcTrajFromCommand(traj));
+  traj.resize(12 * mpc_config_.horizon_);
+  traj.setZero();
+  for (int i = 0; i < mpc_config_.horizon_; ++i)
+    traj[12 * i + 5] = 0.26;
+  setTraj(traj);
 
   current_gait_->update(node_->now());
   Eigen::VectorXd table = current_gait_->getMpcTable(mpc_solver_->getHorizon());
+  //table.setOnes();
   setGaitTable(table);
   Vec4<double> swing_time = current_gait_->getSwingTime();
   // front rare
   static constexpr double sign_fr[4] = {1.0, 1.0, -1.0, -1.0};
   // left right
   static constexpr double sign_lr[4] = {1.0, -1.0, 1.0, -1.0};
-
   for (int i = 0; i < 4; ++i) {
+    // if (table[i] == 0 && swing_stance_config_[i].stance_ == true) {
+    //   Eigen::Vector3d pos;
+    //   first_swing_[i]=true;
+    //   calcMitCheetahFootPos(i, pos);
+    //   setSwing(i, pos, 0.05, swing_time[i]);
+    // }else if(table[i] == 0 && swing_stance_config_[i].stance_ == false){
+    //   Eigen::Vector3d pos;
+    //   first_swing_[i]=false;
+    //   calcMitCheetahFootPos(i, pos);
+    //   setSwing(i, pos, 0.05, swing_time[i]);
+    // }
     if (table[i] == 0 && swing_stance_config_[i].stance_ == true) {
       Eigen::Vector3d pos;
-      first_swing_[i]=true;
-      calcMitCheetahFootPos(i, pos);
-      setSwing(i, pos, 0.05, swing_time[i]);
-    }else if(table[i] == 1 && swing_stance_config_[i].stance_ == false){
-      Eigen::Vector3d pos;
-      first_swing_[i]=false;
-      calcMitCheetahFootPos(i, pos);
-      setSwing(i, pos, 0.05, swing_time[i]);
+      pos << kine_solver_->getHipLocationWorld(i);
+      pos(2)=-0.05;
+      pos(1)+=sign_lr[i]*0.082;
+      p3d_pub_->setPoint(pos(0),pos(1),0,"world");
+      //p3d_pub_->update(node_->now());
+      std::cout<<"setting swing " +LEG_CONFIG[i]<<std::endl;
+      setSwing(i, pos, 0.07, swing_time[i]);
     }
+    //std::cout<<table[0]<<" "<<table[1]<<" "<<table[2]<<" "<<table[3]<<std::endl;
   }
   return QuadrupedMpcController::update();
 }
@@ -78,7 +158,7 @@ QuadrupedLocomotionController::calcTrajFromCommand(Eigen::VectorXd &traj) {
       traj.head(12) << command_->rpy_, command_->xyz_, command_->angular_vel_,
           v_des_world;
       // height = 0.29 from mit code
-      traj(12 * i + 5) = 0.29;
+      traj(12 * i + 5) = 0.35;
     } else {
       // integrate rpy and xyz
       traj.segment(12 * i, 3) = traj.segment(12 * (i - 1), 3) +
@@ -100,7 +180,7 @@ QuadrupedLocomotionController::calcMitCheetahFootPos(size_t leg,
       state_->quat_.toRotationMatrix() * command_->linear_vel_;
 
   // front rare
-  //static constexpr double sign_fr[4] = {1.0, 1.0, -1.0, -1.0};
+  // static constexpr double sign_fr[4] = {1.0, 1.0, -1.0, -1.0};
   // left right
   static constexpr double sign_lr[4] = {1.0, -1.0, 1.0, -1.0};
   footpos.setZero();
@@ -118,7 +198,7 @@ QuadrupedLocomotionController::calcMitCheetahFootPos(size_t leg,
     start_swing_time_[leg] = node_->now();
   } else {
     swingTimeRemaining = current_gait_->getSwingTime(leg) -
-                         (get_node()->now() - start_swing_time_[leg]).seconds();
+                         (node_->now() - start_swing_time_[leg]).seconds();
   }
   Vec3<double> Pf =
       state_->pos_ +
@@ -133,7 +213,7 @@ QuadrupedLocomotionController::calcMitCheetahFootPos(size_t leg,
                   (0.5f * state_->pos_[2] / 9.81f) *
                       (state_->linear_vel_[1] * command_->angular_vel_[2]);
 
-  float pfy_rel = state_->linear_vel_[1] * .5 * stance_time  +
+  float pfy_rel = state_->linear_vel_[1] * .5 * stance_time +
                   .03f * (state_->linear_vel_[1] - v_des_world[1]) +
                   (0.5f * state_->pos_[2] / 9.81f) *
                       (-state_->linear_vel_[0] * command_->angular_vel_[2]);
@@ -143,7 +223,13 @@ QuadrupedLocomotionController::calcMitCheetahFootPos(size_t leg,
   Pf[1] += pfy_rel;
   Pf[2] = -0.003;
   footpos = Pf;
+
   return footpos;
 }
 
 } // namespace quadruped_controllers
+
+#include "pluginlib/class_list_macros.hpp"
+
+PLUGINLIB_EXPORT_CLASS(quadruped_controllers::QuadrupedLocomotionController,
+                       controller_interface::ControllerInterface)

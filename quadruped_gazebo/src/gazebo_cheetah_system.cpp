@@ -230,11 +230,11 @@ hardware_interface::return_type GazeboCheetahSystem::write() {
             (this->dataPtr->joint_velocity_cmd_[j] -
              this->dataPtr->sim_joints_[j]->GetVelocity(0));
     //TODO CHEETAH read from urdf!!!
-    if(effort_cmd>11){
-      effort_cmd=11;
+    if(effort_cmd>17){
+      effort_cmd=17;
     }
-    if(effort_cmd<-11){
-      effort_cmd=-11;
+    if(effort_cmd<-17){
+      effort_cmd=-17;
     }
     this->dataPtr->sim_joints_[j]->SetForce(0, effort_cmd);
   }

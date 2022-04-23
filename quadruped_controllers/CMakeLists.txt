@@ -14,7 +14,7 @@ if(NOT CMAKE_CXX_STANDARD)
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
+  add_compile_options(-Wall -Wextra -Wpedantic )
 endif()
 
 # find dependencies
@@ -33,7 +33,7 @@ find_package(tf2_msgs REQUIRED)
 find_package(qpoases_vendor REQUIRED)
 
 # temporary workaound to fix qpoases_vender bug
-set (qpoases_vendor_LIBRARIES /opt/ros/foxy/lib/libqpOASES.a)
+set (qpoases_vendor_LIBRARIES ${CMAKE_CURRENT_SOURCE_DIR}/third_party/qpOASES/libqpOASES.so)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(pinocchio REQUIRED pinocchio)
@@ -130,10 +130,48 @@ ament_target_dependencies(
   realtime_tools
 )
 
+add_library(locomotion_controller
+  SHARED
+  src/locomotion_controller.cpp 
+  src/controller_base.cpp 
+  src/state_update.cpp 
+  src/pinocchio_solver.cpp 
+  src/ros2_node_interface.cpp 
+  src/swing_stance_controller.cpp
+  src/mpc_formulation.cpp
+  src/mpc_controller.cpp
+  src/foot_swing_trajectory.cpp
+)
+
+target_include_directories(
+  locomotion_controller
+  PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+
+ament_target_dependencies(
+  locomotion_controller
+  nav_msgs
+  geometry_msgs
+  pinocchio
+  tf2
+  tf2_msgs
+  control_msgs
+  controller_interface
+  hardware_interface
+  pluginlib
+  rclcpp
+  rclcpp_lifecycle
+  realtime_tools
+  qpoases_vendor
+)
+
 
 
 # prevent pluginlib from using boost
 target_compile_definitions(controller_base PUBLIC "PLUGINLIB__DISABLE_BOOST_FUNCTIONS")
+target_compile_definitions(locomotion_controller PUBLIC "PLUGINLIB__DISABLE_BOOST_FUNCTIONS")
 
 pluginlib_export_plugin_description_file(
   controller_interface controller_base.xml)
@@ -143,6 +181,9 @@ pluginlib_export_plugin_description_file(
 pluginlib_export_plugin_description_file(
     controller_interface stand_up_controller.xml)
 
+pluginlib_export_plugin_description_file(
+    controller_interface locomotion_controller.xml)
+    
 install(
   TARGETS
   controller_base
@@ -167,6 +208,13 @@ install(
   LIBRARY DESTINATION lib
 )
 
+install(
+  TARGETS
+  locomotion_controller
+  RUNTIME DESTINATION bin
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+)
 
 install(
   DIRECTORY include/
@@ -212,6 +260,7 @@ ament_export_libraries(
   controller_base
   swing_stance_controller
   stand_up_controller
+  locomotion_controller
 )
 ament_export_dependencies(
   control_msgs
@@ -225,5 +274,5 @@ ament_export_dependencies(
 
 target_compile_options(controller_base PUBLIC ${FLAGS})
 target_compile_options(stand_up_controller PUBLIC ${FLAGS})
-
+target_compile_options(locomotion_controller PUBLIC ${FLAGS})
 ament_package()

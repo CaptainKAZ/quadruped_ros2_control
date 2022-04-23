@@ -75,7 +75,7 @@ install(
 )
 
 install(
-  DIRECTORY include/
+  DIRECTORY include launch
   DESTINATION share/${PROJECT_NAME}
 )
 

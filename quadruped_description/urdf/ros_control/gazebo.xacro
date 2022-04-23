@@ -69,7 +69,7 @@
     </gazebo>
     <gazebo>
         <plugin name="p3d_base_controller" filename="libgazebo_ros_p3d.so">
-            <update_rate>100.0</update_rate>
+            <update_rate>1000.0</update_rate>
             <body_name>root</body_name>
             <remapping>odom:=ground_truth/state</remapping>
             <gaussian_noise>0</gaussian_noise>

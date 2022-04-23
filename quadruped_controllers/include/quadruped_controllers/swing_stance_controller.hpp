@@ -5,6 +5,7 @@
 #include "quadruped_controllers/leg_controller.hpp"
 #include "quadruped_controllers/quadruped_types.hpp"
 #include "quadruped_controllers/visibility_control.h"
+#include <atomic>
 #include <cstddef>
 #include <memory>
 #include <rclcpp/time.hpp>
@@ -38,8 +39,11 @@ protected:
   std::unique_ptr<FootSwingTrajectory<double>> swing_traj_[4];
   std::shared_ptr<LegCommand> leg_cmd_[4];
   Mat3<double> kp_stance_, kd_stance_, kp_swing_, kd_swing_;
+private:
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr
       swing_stance_param_callback_handle_;
+  std::atomic<bool> need_update_param_{true};
+  bool updateParam(void);
 };
 
 } // namespace quadruped_controllers

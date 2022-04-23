@@ -25,7 +25,7 @@ CallbackReturn QuadrupedStandUpController::on_activate(
 }
 
 controller_interface::return_type QuadrupedStandUpController::update() {
-  constexpr double target_height = 0.25;
+  constexpr double target_height = 0.2;
   double time_from_start = (node_->now() - start_time_).seconds();
   if (time_from_start > 1) {
     time_from_start = 1;

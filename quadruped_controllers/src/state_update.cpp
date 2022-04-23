@@ -13,10 +13,11 @@ FromGroundTruthStateUpdate::FromGroundTruthStateUpdate(
     : StateUpdateBase(std::forward<decltype(node)>(node),
                       std::forward<decltype(state)>(state)) {
   this->ground_truth_state_ = ground_truth_state;
+  this->ground_truth_state_->update_time_=this->node_->now();
 }
 
 void FromGroundTruthStateUpdate::update(const rclcpp::Time &current_time) {
-  if ((current_time - ground_truth_state_->update_time_).seconds() < 0.001) {
+  if ((current_time - ground_truth_state_->update_time_).seconds() < 0.01) {
     state_->update_time_ = ground_truth_state_->update_time_;
     state_->accel_ = ground_truth_state_->accel_;
     state_->pos_ = ground_truth_state_->pos_;

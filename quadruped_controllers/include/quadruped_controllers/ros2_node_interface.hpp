@@ -3,13 +3,16 @@
 // The module handles ROS non-realtime node comunication stuff
 
 #include "quadruped_controllers/quadruped_types.hpp"
+#include <geometry_msgs/msg/detail/point_stamped__struct.hpp>
 #include <memory>
 #include <rclcpp/node.hpp>
 #include <rclcpp/time.hpp>
+#include <string>
 
 #include "geometry_msgs/msg/twist_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "tf2_msgs/msg/tf_message.hpp"
+#include "geometry_msgs/msg/point_stamped.hpp"
 
 #include "rclcpp_lifecycle/state.hpp"
 #include "realtime_tools/realtime_box.h"
@@ -113,6 +116,28 @@ protected:
   // must reserve before init
   std::shared_ptr<QuadrupedState> truth_state_{
       std::make_shared<QuadrupedState>()};
+};
+
+class P3dPublisher : public Ros2NodeInterfaceBase {
+public:
+  explicit P3dPublisher(rclcpp::Node::SharedPtr &&node,
+                        std::shared_ptr<QuadrupedState> &state,
+                        std::shared_ptr<QuadrupedCommand> &command) {
+    init(std::forward<decltype(node)>(node),
+         std::forward<decltype(state)>(state),
+         std::forward<decltype(command)>(command));
+  }
+  ~P3dPublisher() = default;
+  void init(rclcpp::Node::SharedPtr &&node,
+            std::shared_ptr<QuadrupedState> &state,
+            std::shared_ptr<QuadrupedCommand> &command) override;
+  void update(const rclcpp::Time &current_time) override;
+  void setPoint(double x, double y, double z,std::string frame_id);
+  protected:
+  std::shared_ptr<rclcpp::Publisher<geometry_msgs::msg::PointStamped>> point_pub =
+      nullptr;
+  std::shared_ptr<realtime_tools::RealtimePublisher<geometry_msgs::msg::PointStamped>>
+      rt_point_pub = nullptr;
 };
 
 } // namespace quadruped_controllers
