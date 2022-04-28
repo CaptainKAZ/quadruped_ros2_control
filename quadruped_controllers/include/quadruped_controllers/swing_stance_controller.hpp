@@ -22,8 +22,10 @@ public:
   QUADRUPED_CONTROLLERS_PUBLIC
   controller_interface::return_type update() override;
   QUADRUPED_CONTROLLERS_PUBLIC
-  void setSwing(size_t leg, Eigen::Vector3d &final_pos, double height,
+  void setFirstSwing(size_t leg, Eigen::Vector3d &final_pos, double height,
                 double duration);
+  QUADRUPED_CONTROLLERS_PUBLIC
+  void setSwing(size_t leg, Eigen::Vector3d &final_pos);
   QUADRUPED_CONTROLLERS_PUBLIC
   void setStance(size_t leg, Eigen::Vector3d &force_ff);
 

@@ -62,7 +62,7 @@ CallbackReturn QuadrupedLocomotionController::on_configure(
   if (ret != CallbackReturn::SUCCESS) {
     return ret;
   }
-  p3d_pub_=std::make_shared<P3dPublisher>(get_node(),state_,command_);
+  p3d_pub_ = std::make_shared<P3dPublisher>(get_node(), state_, command_);
   need_update_param_ = false;
   auto locomotion_param_callback_handle =
       [this](std::vector<rclcpp::Parameter> params) {
@@ -70,15 +70,15 @@ CallbackReturn QuadrupedLocomotionController::on_configure(
         result.successful = true;
         for (const auto &param : params) {
           if (param.get_name() == "locomotion.gait.current") {
-            if(gaits_.find(param.get_value<std::string>()) == gaits_.end()) {
+            if (gaits_.find(param.get_value<std::string>()) == gaits_.end()) {
               RCLCPP_ERROR(get_node()->get_logger(),
                            "current gait %s is not found",
                            param.get_value<std::string>().c_str());
               result.successful = false;
               result.reason = "current gait is not found";
               break;
-            }else {
-              need_update_param_=true;
+            } else {
+              need_update_param_ = true;
             }
           } else if (param.get_name().find("locomotion.gait.") !=
                      std::string::npos) {
@@ -88,61 +88,98 @@ CallbackReturn QuadrupedLocomotionController::on_configure(
         }
         return result;
       };
-  locomotion_param_callback_handle_=node_->add_on_set_parameters_callback(locomotion_param_callback_handle);
+  locomotion_param_callback_handle_ =
+      node_->add_on_set_parameters_callback(locomotion_param_callback_handle);
+  des_kine_solver_ = std::make_shared<PinocchioSolver>(urdf_);
   return CallbackReturn::SUCCESS;
 }
 
 controller_interface::return_type QuadrupedLocomotionController::update() {
+  static double des_vx{0.3};
+  double des_vy = 0;
+  double des_vw = 0;
+
+  std::cout << "des_vx" << des_vx << "  actual: " << state_->linear_vel_(0)
+            << std::endl;
   if (need_update_param_) {
     need_update_param_ = false;
-    try{
-    current_gait_ = gaits_.at(node_->get_parameter("locomotion.gait.current").get_value<std::string>());
-    }catch(const std::out_of_range &e){
+    try {
+      current_gait_ = gaits_.at(node_->get_parameter("locomotion.gait.current")
+                                    .get_value<std::string>());
+    } catch (const std::out_of_range &e) {
       RCLCPP_ERROR(get_node()->get_logger(), "current gait %s is not found",
-                   node_->get_parameter("locomotion.gait.current").get_value<std::string>().c_str());
+                   node_->get_parameter("locomotion.gait.current")
+                       .get_value<std::string>()
+                       .c_str());
       return controller_interface::return_type::ERROR;
     }
   }
   Eigen::VectorXd traj;
-  // setTraj(calcTrajFromCommand(traj));
   traj.resize(12 * mpc_config_.horizon_);
   traj.setZero();
-  for (int i = 0; i < mpc_config_.horizon_; ++i)
-    traj[12 * i + 5] = 0.26;
+  if (current_gait_ == gaits_.at("stand")) {
+    for (int i = 0; i < mpc_config_.horizon_; ++i)
+      traj[12 * i + 5] = 0.26;
+    for (int i = 0; i < mpc_config_.horizon_; ++i)
+      traj[12 * i + 5] = 0.26;
+  } else {
+    des_vx += 0.0001;
+    for (int i = 0; i < mpc_config_.horizon_; ++i) {
+      traj[12 * i + 5] = 0.26;
+      traj[12 * i + 3] = state_->pos_(0) + des_vx * mpc_config_.dt_ * (i + 1);
+      traj[12 * i + 4] = state_->pos_(1);
+      traj[12 * i + 9] = des_vx;
+    }
+  }
   setTraj(traj);
 
   current_gait_->update(node_->now());
   Eigen::VectorXd table = current_gait_->getMpcTable(mpc_solver_->getHorizon());
-  //table.setOnes();
   setGaitTable(table);
   Vec4<double> swing_time = current_gait_->getSwingTime();
+  Vec4<double> stance_time = current_gait_->getStanceTime();
+
+  Eigen::VectorXd q(des_kine_solver_->getNq()), v(des_kine_solver_->getNv());
+  q.setZero();
+  v.setZero();
+  Eigen::Vector3d v_des;
+  v_des << des_vx, des_vy, 0;
+  v_des = state_->quat_.toRotationMatrix().transpose() * v_des;
+  q.head(7) << state_->pos_, state_->quat_.coeffs();
+  v.head(6) << v_des, 0, 0, des_vw;
+  des_kine_solver_->calcForwardKinematics(q, v);
+
   // front rare
-  static constexpr double sign_fr[4] = {1.0, 1.0, -1.0, -1.0};
+  // static constexpr double sign_fr[4] = {1.0, 1.0, -1.0, -1.0};
   // left right
   static constexpr double sign_lr[4] = {1.0, -1.0, 1.0, -1.0};
   for (int i = 0; i < 4; ++i) {
-    // if (table[i] == 0 && swing_stance_config_[i].stance_ == true) {
-    //   Eigen::Vector3d pos;
-    //   first_swing_[i]=true;
-    //   calcMitCheetahFootPos(i, pos);
-    //   setSwing(i, pos, 0.05, swing_time[i]);
-    // }else if(table[i] == 0 && swing_stance_config_[i].stance_ == false){
-    //   Eigen::Vector3d pos;
-    //   first_swing_[i]=false;
-    //   calcMitCheetahFootPos(i, pos);
-    //   setSwing(i, pos, 0.05, swing_time[i]);
-    // }
-    if (table[i] == 0 && swing_stance_config_[i].stance_ == true) {
-      Eigen::Vector3d pos;
-      pos << kine_solver_->getHipLocationWorld(i);
-      pos(2)=-0.05;
-      pos(1)+=sign_lr[i]*0.082;
-      p3d_pub_->setPoint(pos(0),pos(1),0,"world");
-      //p3d_pub_->update(node_->now());
-      std::cout<<"setting swing " +LEG_CONFIG[i]<<std::endl;
-      setSwing(i, pos, 0.07, swing_time[i]);
+    // pfoot = phip
+    Eigen::Vector3d pos;
+    pos << kine_solver_->getHipLocationWorld(i);
+    // offset
+    pos(1) += sign_lr[i] * 0.085;
+    // pfoot +=  vhip*tstance/2
+    Eigen::Vector3d vel;
+    vel << kine_solver_->getHipVelocityWorld(i);
+    pos += vel * stance_time(i) / 2;
+    // pfoot += kp* (vhip-vhip_des)
+    Eigen::Vector3d vhip_des;
+    vhip_des = des_kine_solver_->getHipVelocityWorld(i);
+    pos += (vhip_des - vel) * 0.3;
+    pos(2) = 0.0;
+    if (i == 1) {
+      p3d_pub_->setPoint(pos(0), pos(1), pos(2), "world");
     }
-    //std::cout<<table[0]<<" "<<table[1]<<" "<<table[2]<<" "<<table[3]<<std::endl;
+
+    if (table[i] == 0 && swing_stance_config_[i].stance_ == true) {
+
+      // p3d_pub_->update(node_->now());
+      // std::cout<<"setting swing " +LEG_CONFIG[i]<<std::endl;
+      setFirstSwing(i, pos, 0.08, swing_time[i]);
+    }else if(table[i]==0){
+      setSwing(i, pos);
+    }
   }
   return QuadrupedMpcController::update();
 }

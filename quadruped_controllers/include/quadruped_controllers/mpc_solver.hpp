@@ -1,6 +1,7 @@
 // copied form qiayuan
 
 #pragma once
+//#include "OsqpEigen/OsqpEigen.h"
 #include "qpOASES.hpp"
 #include "quadruped_controllers/mpc_formulation.hpp"
 #include "quadruped_controllers/quadruped_types.hpp"
@@ -47,12 +48,12 @@ public:
   void solve(rclcpp::Time time, const std::shared_ptr<QuadrupedState> &state,
              const VectorXd &gait_table,
              const Matrix<double, Dynamic, 1> &traj) {
-    double dt ;
-    try{
-    dt= (time - last_update_).seconds();
-    }catch (std::exception &e){
+    double dt;
+    try {
+      dt = (time - last_update_).seconds();
+    } catch (std::exception &e) {
       std::cout << "exception caught: " << e.what() << std::endl;
-      dt=-1.0;
+      dt = -1.0;
     }
     if (dt < 0) // Simulation reset
       last_update_ = time;
@@ -69,7 +70,7 @@ public:
         state_ = *state.get();
         gait_table_ = gait_table;
         traj_ = traj;
-        //TODO: use thread pooling
+        // TODO: use thread pooling
         thread_ = std::make_shared<std::thread>(
             std::thread(&MpcSolverBase::solvingThread, this));
         thread_->detach();
@@ -105,25 +106,29 @@ private:
   void formulate() {
     //Timer timer;
     mpc_formulation_.buildStateSpace(mass_, inertia_, state_);
-    // std::cout<<"cost "<<timer.toc()*1000<<"ms to build state space"<<std::endl;
-    // timer.tic();
+    // std::cout<<"cost "<<timer.toc()*1000<<"ms to build state
+    // space"<<std::endl; timer.tic();
     mpc_formulation_.buildQp(dt_);
-    //std::cout<<"cost "<<timer.toc()*1000<<"ms to build Qp"<<std::endl;
-    // timer.tic();
+    // std::cout<<"cost "<<timer.toc()*1000<<"ms to build Qp"<<std::endl;
+    //  timer.tic();
     mpc_formulation_.buildHessianMat();
-    // std::cout<<"cost "<<timer.toc()*1000<<"ms to build HessianMat"<<std::endl;
-    // timer.tic();
+    // std::cout<<"cost "<<timer.toc()*1000<<"ms to build
+    // HessianMat"<<std::endl; timer.tic();
     mpc_formulation_.buildGVec(gravity_, state_, traj_);
     // std::cout<<"cost "<<timer.toc()*1000<<"ms to build GVec"<<std::endl;
     // timer.tic();
     mpc_formulation_.buildConstrainMat(mu_);
-    // std::cout<<"cost "<<timer.toc()*1000<<"ms to build ConstrainMat"<<std::endl;
-    // timer.tic();
+    // std::cout<<"cost "<<timer.toc()*1000<<"ms to build
+    // ConstrainMat"<<std::endl; timer.tic();
     mpc_formulation_.buildConstrainUpperBound(f_max_, gait_table_);
-    // std::cout<<"cost "<<timer.toc()*1000<<"ms to build ConstrainUpperBound"<<std::endl;
-    // timer.tic();
+    // std::cout<<"cost "<<timer.toc()*1000<<"ms to build
+    // ConstrainUpperBound"<<std::endl; timer.tic();
     mpc_formulation_.buildConstrainLowerBound();
-    //std::cout<<"cost "<<timer.toc()*1000<<"ms to build lower bound"<<std::endl;
+    // std::cout<<"cost "<<timer.toc()*1000<<"ms to build
+    // ConstrainLowerBound"<<std::endl; 
+    //timer.tic();
+    mpc_formulation_.reduceQpProblem();
+    //std::cout<<"cost "<<timer.toc()*1000<<"ms to reduce"<<std::endl;
   }
 
   rclcpp::Time last_update_;
@@ -141,6 +146,49 @@ private:
   bool horizon_changed_;
 };
 
+// class OsQpEigenSolver : public MpcSolverBase {
+// public:
+//   using MpcSolverBase::MpcSolverBase;
+
+// protected:
+//   void solving() override {
+//     Timer timer;
+//     if (!solver_.isInitialized()) {
+//       solver_.settings()->setVerbosity(false);
+//       solver_.settings()->setWarmStart(true);
+//       solver_.data()->setNumberOfVariables(12 * mpc_formulation_.horizon_);
+//       solver_.data()->setNumberOfConstraints(20 * mpc_formulation_.horizon_);
+//       solver_.data()->setLinearConstraintsMatrix(mpc_formulation_.a_);
+//       solver_.data()->setHessianMatrix(mpc_formulation_.h_);
+//       solver_.data()->setGradient(mpc_formulation_.g_);
+//       solver_.data()->setLowerBound(mpc_formulation_.lb_a_);
+//       solver_.data()->setUpperBound(mpc_formulation_.ub_a_);
+//       solver_.initSolver();
+//     } else {
+//       solver_.data()->setLinearConstraintsMatrix(mpc_formulation_.a_);
+//       solver_.updateHessianMatrix(mpc_formulation_.h_);
+//       solver_.updateGradient(mpc_formulation_.g_);
+//       solver_.updateLowerBound(mpc_formulation_.lb_a_);
+//       solver_.updateUpperBound(mpc_formulation_.ub_a_);
+//     }
+//     solver_.solve();
+//     Eigen::VectorXd solution = solver_.getSolution();
+//     for (int leg = 0; leg < 4; ++leg) {
+//       solution_[leg].x() = solution[3 * leg];
+//       solution_[leg].y() = solution[3 * leg + 1];
+//       solution_[leg].z() = solution[3 * leg + 2];
+//       if (solution_[leg].norm() > 1e3) {
+//         RCUTILS_LOG_ERROR_NAMED("MPC Solver", "MPC solve failed, result:");
+//         std::cerr << solution_[leg];
+//       }
+//     }
+//     std::cout << "cost " << timer.toc() * 1000 << "ms to solve" << std::endl;
+//   }
+
+// private:
+//   OsqpEigen::Solver solver_;
+// };
+
 class QpOasesSolver : public MpcSolverBase {
 public:
   using MpcSolverBase::MpcSolverBase;
@@ -149,8 +197,8 @@ protected:
   void solving() override {
     //Timer timer;
     auto qp_problem = qpOASES::QProblem(
-        12 * mpc_formulation_.horizon_,
-        20 * mpc_formulation_.horizon_); // TODO: Test SQProblem
+        mpc_formulation_.num_var_reduced_,
+        mpc_formulation_.num_constrain_reduced_); // TODO: Test SQProblem
     qpOASES::Options options;
     options.setToMPC();
     //    options.enableEqualities = qpOASES::BT_TRUE;
@@ -158,9 +206,9 @@ protected:
     qp_problem.setOptions(options);
     int n_wsr = 200;
     qpOASES::returnValue rvalue = qp_problem.init(
-        mpc_formulation_.h_.data(), mpc_formulation_.g_.data(),
-        mpc_formulation_.a_.data(), nullptr, nullptr,
-        mpc_formulation_.lb_a_.data(), mpc_formulation_.ub_a_.data(), n_wsr);
+        mpc_formulation_.h_reduced_.data(), mpc_formulation_.g_reduced_.data(),
+        mpc_formulation_.a_reduced_.data(), nullptr, nullptr,
+        mpc_formulation_.lb_a_reduced_.data(), mpc_formulation_.ub_a_reduced_.data(), n_wsr);
     printFailedInit(rvalue);
 
     if (rvalue != qpOASES::SUCCESSFUL_RETURN) {
@@ -169,11 +217,12 @@ protected:
       return;
     }
 
-    std::vector<qpOASES::real_t> qp_sol(12 * mpc_formulation_.horizon_, 0);
+    std::vector<qpOASES::real_t> qp_sol(mpc_formulation_.num_var_reduced_, 0);
 
     if (qp_problem.getPrimalSolution(qp_sol.data()) !=
         qpOASES::SUCCESSFUL_RETURN)
       RCUTILS_LOG_WARN_NAMED("MPC Solver", "Failed to solve mpc!\n");
+    mpc_formulation_.recoverQpSolution(qp_sol);
 
     for (int leg = 0; leg < 4; ++leg) {
       solution_[leg].x() = qp_sol[3 * leg];
@@ -184,7 +233,7 @@ protected:
         std::cerr << solution_[leg];
       }
     }
-    //std::cout<<"cost "<<timer.toc()*1000<<"ms to solve"<<std::endl;
+    //std::cout << "cost " << timer.toc() * 1000 << "ms to solve" << std::endl;
   }
 
   void printFailedInit(qpOASES::returnValue rvalue) {

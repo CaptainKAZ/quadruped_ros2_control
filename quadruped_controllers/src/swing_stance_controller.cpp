@@ -53,7 +53,7 @@ CallbackReturn QuadrupedSwingStanceController::on_configure(
                     "parameter " + name + " should be a 9-element array";
                 return;
               }
-              need_update_param_=true;
+              need_update_param_ = true;
             }
           };
           accept_mat3x3("kp_stance");
@@ -77,20 +77,20 @@ CallbackReturn QuadrupedSwingStanceController::on_configure(
     }
   }
   // undate param once at the beginning
-  if(updateParam()){
-    need_update_param_=false;
+  if (updateParam()) {
+    need_update_param_ = false;
     return CallbackReturn::SUCCESS;
-  }else{
+  } else {
     return CallbackReturn::ERROR;
   }
 }
 
 controller_interface::return_type QuadrupedSwingStanceController::update() {
-  if(need_update_param_){
-    if(updateParam()){
-      need_update_param_=false;
+  if (need_update_param_) {
+    if (updateParam()) {
+      need_update_param_ = false;
       return controller_interface::return_type::OK;
-    }else{
+    } else {
       return controller_interface::return_type::ERROR;
     }
   }
@@ -136,9 +136,10 @@ controller_interface::return_type QuadrupedSwingStanceController::update() {
   return QuadrupedControllerBase::update();
 }
 
-void QuadrupedSwingStanceController::setSwing(size_t leg,
-                                              Eigen::Vector3d &final_pos,
-                                              double height, double duration) {
+void QuadrupedSwingStanceController::setFirstSwing(size_t leg,
+                                                   Eigen::Vector3d &final_pos,
+                                                   double height,
+                                                   double duration) {
   rcpputils::check_true(leg < 4, "leg index out of range");
   swing_stance_config_[leg].swing_duration_ = duration;
   swing_stance_config_[leg].stance_ = false;
@@ -146,6 +147,13 @@ void QuadrupedSwingStanceController::setSwing(size_t leg,
   swing_traj_[leg]->setHeight(height);
   swing_traj_[leg]->setFinalPosition(final_pos);
   swing_traj_[leg]->setInitialPosition(state_->foot_pos_[leg]);
+}
+
+void QuadrupedSwingStanceController::setSwing(size_t leg,
+                                              Eigen::Vector3d &final_pos) {
+  rcpputils::check_true(leg < 4, "leg index out of range");
+  swing_stance_config_[leg].stance_ = false;
+  swing_traj_[leg]->setFinalPosition(final_pos);
 }
 
 void QuadrupedSwingStanceController::setStance(size_t leg,
@@ -158,8 +166,8 @@ void QuadrupedSwingStanceController::setStance(size_t leg,
   swing_stance_config_[leg].stance_foot_pos_ = state_->foot_pos_[leg];
 }
 
-bool QuadrupedSwingStanceController::updateParam(){
- for (auto &config : swing_stance_config_) {
+bool QuadrupedSwingStanceController::updateParam() {
+  for (auto &config : swing_stance_config_) {
     config.stance_force_ff_.setZero();
   }
   auto get_mat3 = [this](std::string name, Mat3<double> &mat) {

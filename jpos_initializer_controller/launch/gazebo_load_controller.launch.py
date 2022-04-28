@@ -26,7 +26,7 @@ def generate_launch_description():
         PythonLaunchDescriptionSource([os.path.join(
             get_package_share_directory('gazebo_ros'), 'launch'), '/gazebo.launch.py']),
         launch_arguments={'verbose': 'true',
-                          'pause': 'true', 'physics': 'bullet','extra_gazebo_args':'--ros-args --params-file '+gazebo_ros_param_path}.items()
+                          'pause': 'false', 'physics': 'bullet','extra_gazebo_args':'--ros-args --params-file '+gazebo_ros_param_path}.items()
     )
     # Spawn
     spawn = Node(package='gazebo_ros', executable='spawn_entity.py',

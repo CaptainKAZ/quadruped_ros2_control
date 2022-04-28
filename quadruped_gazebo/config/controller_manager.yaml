@@ -17,7 +17,7 @@ controller_manager:
     locomotion_controller:
       type: quadruped_controllers/QuadrupedLocomotionController
     
-    use_sim_time: true
+    use_sim_time: false
 
 jpos_initializer_controller:
   ros__parameters:
@@ -50,8 +50,8 @@ jpos_initializer_controller:
 locomotion_controller:
   ros__parameters:
     kp_stance: [
-      100.,0.,0.,
-      0.,100.,0.,
+      0.,0.,0.,
+      0.,0.,0.,
       0.,0.,0.]
 
     kd_stance: [
@@ -60,9 +60,9 @@ locomotion_controller:
       0.,0.,7.]
 
     kp_swing: [
-      700., 0., 0.,
-      0., 700., 0.,
-      0., 0., 150.]
+      900., 0., 0.,
+      0., 900., 0.,
+      0., 0., 200.]
 
     kd_swing: [
       7.,0.,0.,
@@ -78,17 +78,17 @@ locomotion_controller:
           offsets: [0.,0.,0.,0.]
           durations: [1.0,1.0,1.0,1.0]
         tort:
-          cycle: 0.18
+          cycle: 0.25
           offsets: [0.,0.5,0.5,0.]
           durations: [0.5,0.5,0.5,0.5]
         cat:
-          cycle: 0.18
+          cycle: 0.6
           offsets: [0.,0.25,0.50,0.75]
           durations: [0.75,0.75,0.75,0.75]
 
     use_sim_time: true
 
     mpc:
-      dt: 0.02
+      dt: 0.01
 
-      horizon: 9
+      horizon: 10

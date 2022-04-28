@@ -21,14 +21,14 @@ void OdomTfPublisher::init(rclcpp::Node::SharedPtr &&node,
       odom_tf_pub_);
   rt_odom_pub_->lock();
   auto &odometry_message = rt_odom_pub_->msg_;
-  odometry_message.header.frame_id = "base_link";
+  odometry_message.header.frame_id = "root";
   odometry_message.child_frame_id = "world";
   rt_odom_pub_->unlock();
   rt_odom_tf_pub_->lock();
   auto &tf_message = rt_odom_tf_pub_->msg_;
   tf_message.transforms.resize(1);
   tf_message.transforms.front().header.frame_id = "world";
-  tf_message.transforms.front().child_frame_id = "base_link";
+  tf_message.transforms.front().child_frame_id = "root";
   rt_odom_tf_pub_->unlock();
 }
 

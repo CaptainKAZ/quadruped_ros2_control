@@ -31,6 +31,8 @@ find_package(realtime_tools REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_msgs REQUIRED)
 find_package(qpoases_vendor REQUIRED)
+find_package(osqp REQUIRED)
+find_package(OsqpEigen REQUIRED)
 
 # temporary workaound to fix qpoases_vender bug
 set (qpoases_vendor_LIBRARIES ${CMAKE_CURRENT_SOURCE_DIR}/third_party/qpOASES/libqpOASES.so)
@@ -148,6 +150,7 @@ target_include_directories(
   PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
+  
 )
 
 ament_target_dependencies(
@@ -165,6 +168,8 @@ ament_target_dependencies(
   rclcpp_lifecycle
   realtime_tools
   qpoases_vendor
+  osqp
+  OsqpEigen
 )
 
 
@@ -241,6 +246,56 @@ if(BUILD_TESTING)
     controller_manager
     hardware_interface
     ros2_control_test_assets
+  )
+
+  add_executable(solver_test test/solver_test.cpp src/mpc_formulation.cpp)
+  
+  target_include_directories(
+    solver_test PUBLIC
+    include
+  )
+  
+  ament_target_dependencies(
+    solver_test
+    nav_msgs
+    geometry_msgs
+    pinocchio
+    tf2
+    tf2_msgs
+    control_msgs
+    controller_interface
+    hardware_interface
+    pluginlib
+    rclcpp
+    rclcpp_lifecycle
+    realtime_tools
+    qpoases_vendor
+    OsqpEigen
+    osqp
+  )
+
+  add_executable(formulation_test test/formulation_test.cpp src/mpc_formulation.cpp)
+  
+  target_include_directories(
+    formulation_test PUBLIC
+    include
+  )
+  
+  ament_target_dependencies(
+    formulation_test
+    nav_msgs
+    geometry_msgs
+    pinocchio
+    tf2
+    tf2_msgs
+    control_msgs
+    controller_interface
+    hardware_interface
+    pluginlib
+    rclcpp
+    rclcpp_lifecycle
+    realtime_tools
+    qpoases_vendor
   )
 
   # ament_add_gmock(test_controller_base test/test_controller_base.cpp)

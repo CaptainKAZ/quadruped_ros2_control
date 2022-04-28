@@ -38,5 +38,6 @@ private:
   bool first_swing_[4];
   rclcpp::Time start_swing_time_[4];
   std::shared_ptr<P3dPublisher> p3d_pub_;
+  std::shared_ptr<PinocchioSolver> des_kine_solver_;
 };
 } // namespace quadruped_controllers

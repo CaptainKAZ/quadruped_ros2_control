@@ -118,6 +118,7 @@ controller_interface::return_type QuadrupedMpcController::update() {
   if(need_update_param_){
     if(updateParam()){
       need_update_param_ = false;
+      std::cout<<"update param"<<std::endl;
       return controller_interface::return_type::OK;
     }else{
       return controller_interface::return_type::ERROR;
