@@ -3,6 +3,7 @@
 #include "quadruped_controllers/gait.hpp"
 #include "quadruped_controllers/mpc_controller.hpp"
 #include "quadruped_controllers/mpc_solver.hpp"
+#include "quadruped_controllers/quadruped_types.hpp"
 #include "quadruped_controllers/ros2_node_interface.hpp"
 #include <atomic>
 #include <cstddef>
@@ -24,14 +25,12 @@ public:
                std::shared_ptr<OffsetDurationGait<double>> gait);
 
 protected:
-  std::unordered_map<std::string, std::shared_ptr<OffsetDurationGait<double>>>
-      gaits_;
-  std::shared_ptr<OffsetDurationGait<double>> current_gait_;
 
+  std::unordered_map<std::string, std::shared_ptr<MpcGait>>
+      gaits_;
+  std::shared_ptr<MpcGait> current_gait_;
 private:
   inline Eigen::VectorXd &calcTrajFromCommand(Eigen::VectorXd &traj);
-  inline Eigen::Vector3d &calcMitCheetahFootPos(size_t leg,
-                                                Eigen::Vector3d &footpos);
   std::atomic<bool> need_update_param_{true};
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr
       locomotion_param_callback_handle_;

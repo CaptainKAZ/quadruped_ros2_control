@@ -196,4 +196,19 @@ bool QuadrupedMpcController::updateParam() {
   }
 }
 
+void QuadrupedMpcController::setMpcHorizonDt(double horizon, double dt) {
+  mpc_config_.horizon_ = horizon;
+  mpc_config_.dt_ = dt;
+  traj_.resize(12 * mpc_config_.horizon_);
+  Eigen::Matrix<double, 13, 1> weight;
+  weight << mpc_config_.weight.ori_roll_, mpc_config_.weight.ori_pitch_,
+      mpc_config_.weight.ori_yaw_, mpc_config_.weight.pos_x_,
+      mpc_config_.weight.pos_y_, mpc_config_.weight.pos_z_,
+      mpc_config_.weight.rate_roll_, mpc_config_.weight.rate_pitch_,
+      mpc_config_.weight.rate_yaw_, mpc_config_.weight.vel_x_,
+      mpc_config_.weight.vel_y_, mpc_config_.weight.vel_z_, 0;
+  mpc_solver_->setup(mpc_config_.dt_, mpc_config_.horizon_, 120, weight,
+                     mpc_config_.weight.alpha_, 1.0);
+}
+
 } // namespace quadruped_controllers

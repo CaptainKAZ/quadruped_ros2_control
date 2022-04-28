@@ -23,7 +23,7 @@ public:
 protected:
   void setTraj(const Eigen::VectorXd &traj);
   void setGaitTable(const Eigen::VectorXd &table);
-
+  void setMpcHorizonDt(const double horizon, const double dt);
   Eigen::VectorXd gait_table_;
   Eigen::VectorXd traj_;
   std::shared_ptr<MpcSolverBase> mpc_solver_;
