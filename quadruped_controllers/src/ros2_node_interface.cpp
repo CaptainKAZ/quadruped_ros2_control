@@ -1,4 +1,5 @@
 #include "quadruped_controllers/ros2_node_interface.hpp"
+#include "geometry_msgs/msg/point.hpp"
 #include "quadruped_controllers/quadruped_types.hpp"
 #include "rclcpp/time.hpp"
 #include <memory>
@@ -69,42 +70,34 @@ void TwistSubscriber::init(rclcpp::Node::SharedPtr &&node,
                            std::shared_ptr<QuadrupedCommand> &command) {
   Ros2NodeInterfaceBase::init(std::forward<decltype(node)>(node), state,
                               command);
-  cmd_sub_ = node->create_subscription<geometry_msgs::msg::TwistStamped>(
+  cmd_sub_ = node->create_subscription<geometry_msgs::msg::Twist>(
       "/cmd_vel", rclcpp::SystemDefaultsQoS(),
-      [this](const std::shared_ptr<geometry_msgs::msg::TwistStamped> msg)
-          -> void { rx_msg_ptr.set(std::move(msg)); });
+      [this](const std::shared_ptr<geometry_msgs::msg::Twist> msg) -> void {
+        rx_msg_ptr.set(std::move(msg));
+        last_time_ = node_->now();
+      });
   last_time_ = node->get_clock()->now();
-  rx_msg_ptr.set(std::make_shared<geometry_msgs::msg::TwistStamped>());
+  rx_msg_ptr.set(std::make_shared<geometry_msgs::msg::Twist>());
 }
 
 void TwistSubscriber::update(const rclcpp::Time &current_time) {
-  std::shared_ptr<geometry_msgs::msg::TwistStamped> last_msg;
+  std::shared_ptr<geometry_msgs::msg::Twist> last_msg;
   rx_msg_ptr.get(last_msg);
 
   if (last_msg == nullptr) {
     return;
   }
-  if (current_time - last_msg->header.stamp >
+  if (current_time - last_time_ >
       rclcpp::Duration::from_seconds(0.5)) {
-    rx_msg_ptr.set(std::make_shared<geometry_msgs::msg::TwistStamped>());
+    rx_msg_ptr.set(std::make_shared<geometry_msgs::msg::Twist>());
   }
-  const auto dt = (current_time - last_time_).seconds();
-  last_time_ = current_time;
-  command_->linear_vel_(0) = last_msg->twist.linear.x;
-  command_->linear_vel_(1) = last_msg->twist.linear.y;
+  command_->linear_vel_(0) = last_msg->linear.x;
+  command_->linear_vel_(1) = last_msg->linear.y;
   // cant set z velocity by twist message
   command_->linear_vel_(2) = 0;
   command_->angular_vel_(0) = 0;
   command_->angular_vel_(1) = 0;
-  command_->angular_vel_(2) = last_msg->twist.angular.z;
-  auto v_des_world = state_->quat_.toRotationMatrix() * command_->linear_vel_;
-  command_->xyz_(0) = state_->pos_(0) + dt * v_des_world(0);
-  command_->xyz_(1) = state_->pos_(1) + dt * v_des_world(1);
-  command_->xyz_(2) = 0;
-  command_->rpy_(0) = 0;
-  command_->rpy_(1) = 0;
-  command_->rpy_(2) = state_->quat_.toRotationMatrix().eulerAngles(2, 1, 0)(2) +
-                      dt * command_->angular_vel_(2);
+  command_->angular_vel_(2) = last_msg->angular.z;
 }
 
 void GroundTruthSubscriber::init(rclcpp::Node::SharedPtr &&node,
@@ -157,33 +150,105 @@ void P3dPublisher::init(rclcpp::Node::SharedPtr &&node,
                         std::shared_ptr<QuadrupedCommand> &command) {
   Ros2NodeInterfaceBase::init(std::forward<decltype(node)>(node), state,
                               command);
-  point_pub = node->create_publisher<geometry_msgs::msg::PointStamped>(
-      "/debug_point", rclcpp::SystemDefaultsQoS());
+  point_pub = node->create_publisher<visualization_msgs::msg::Marker>(
+      "/debug", rclcpp::SystemDefaultsQoS());
   rt_point_pub = std::make_shared<
-      realtime_tools::RealtimePublisher<geometry_msgs::msg::PointStamped>>(
+      realtime_tools::RealtimePublisher<visualization_msgs::msg::Marker>>(
       point_pub);
   rt_point_pub->lock();
-  auto &point_message = rt_point_pub->msg_;
-  point_message.header.frame_id = "world";
+  auto &point_marker_message = rt_point_pub->msg_;
+  point_marker_message.header.frame_id = "world";
   rt_point_pub->unlock();
 }
 
 void P3dPublisher::update(const rclcpp::Time &current_time) {
   if (rt_point_pub->trylock()) {
     rt_point_pub->msg_.header.stamp = current_time;
-    std::cout << current_time.nanoseconds() << std::endl;
   }
-}
-//WARN: MAY STUCK NON REALTIME
-void P3dPublisher::setPoint(double x, double y, double z,
-                            std::string frame_id) {
-  rt_point_pub->lock();
-  rt_point_pub->msg_.header.stamp = node_->now();
-  rt_point_pub->msg_.point.x = x;
-  rt_point_pub->msg_.point.y = y;
-  rt_point_pub->msg_.point.z = z;
-  rt_point_pub->msg_.header.frame_id = frame_id;
   rt_point_pub->unlockAndPublish();
+}
+
+void P3dPublisher::addPoint(double x, double y, double z) {
+  if (rt_point_pub->trylock()) {
+    auto &point_marker_message = rt_point_pub->msg_;
+    point_marker_message.type = visualization_msgs::msg::Marker::SPHERE_LIST;
+    point_marker_message.action = visualization_msgs::msg::Marker::ADD;
+    point_marker_message.lifetime = rclcpp::Duration(1e9);
+    point_marker_message.color.a = 1.0;
+    point_marker_message.color.g = 1.0;
+    point_marker_message.scale.x = 0.01;
+    point_marker_message.scale.y = 0.01;
+    point_marker_message.scale.z = 0.01;
+    geometry_msgs::msg::Point p;
+    p.x = x;
+    p.y = y;
+    p.z = z;
+    point_marker_message.points.push_back(p);
+  }
+  rt_point_pub->unlock();
+}
+
+void P3dPublisher::clearPoint() {
+  rt_point_pub->lock();
+  auto &point_marker_message = rt_point_pub->msg_;
+  point_marker_message.points.clear();
+  rt_point_pub->unlock();
+}
+
+void LinePublisher::init(rclcpp::Node::SharedPtr &&node,
+                         std::shared_ptr<QuadrupedState> &state,
+                         std::shared_ptr<QuadrupedCommand> &command) {
+  Ros2NodeInterfaceBase::init(std::forward<decltype(node)>(node), state,
+                              command);
+  line_pub = node->create_publisher<visualization_msgs::msg::Marker>(
+      "/debug", rclcpp::SystemDefaultsQoS());
+  rt_line_pub = std::make_shared<
+      realtime_tools::RealtimePublisher<visualization_msgs::msg::Marker>>(
+      line_pub);
+  rt_line_pub->lock();
+  auto &point_marker_message = rt_line_pub->msg_;
+  point_marker_message.header.frame_id = "world";
+  rt_line_pub->unlock();
+}
+
+void LinePublisher::update(const rclcpp::Time &current_time) {
+  if (rt_line_pub->trylock()) {
+    rt_line_pub->msg_.header.stamp = current_time;
+  }
+  rt_line_pub->unlockAndPublish();
+}
+
+void LinePublisher::addLine(double x1, double y1, double z1, double x2,
+                            double y2, double z2) {
+  if (rt_line_pub->trylock()) {
+    auto &point_marker_message = rt_line_pub->msg_;
+    point_marker_message.type = visualization_msgs::msg::Marker::LINE_LIST;
+    point_marker_message.action = visualization_msgs::msg::Marker::ADD;
+    point_marker_message.lifetime = rclcpp::Duration(1e9);
+    point_marker_message.color.a = 1.0;
+    point_marker_message.color.r = 1.0;
+    point_marker_message.scale.x = 0.01;
+    point_marker_message.scale.y = 0.01;
+    point_marker_message.scale.z = 0.01;
+    geometry_msgs::msg::Point p1;
+    p1.x = x1;
+    p1.y = y1;
+    p1.z = z1;
+    point_marker_message.points.push_back(p1);
+    geometry_msgs::msg::Point p2;
+    p2.x = x2;
+    p2.y = y2;
+    p2.z = z2;
+    point_marker_message.points.push_back(p2);
+  }
+  rt_line_pub->unlock();
+}
+
+void LinePublisher::clearLine() {
+  rt_line_pub->lock();
+  auto &point_marker_message = rt_line_pub->msg_;
+  point_marker_message.points.clear();
+  rt_line_pub->unlock();
 }
 
 } // namespace quadruped_controllers

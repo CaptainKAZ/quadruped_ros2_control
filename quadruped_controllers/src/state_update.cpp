@@ -116,7 +116,7 @@ LinearKFPosVelEstimateUpdate::LinearKFPosVelEstimateUpdate(
   c_.block(3, 0, 3, 6) = c1;
   c_.block(6, 0, 3, 6) = c1;
   c_.block(9, 0, 3, 6) = c1;
-  c_.block(0, 6, 12, 12) = Eigen::Matrix<double, 12, 12>::Identity();
+  c_.block(0, 6, 12, 12) = -1.0* Eigen::Matrix<double, 12, 12>::Identity();
   c_.block(12, 0, 3, 6) = c2;
   c_.block(15, 0, 3, 6) = c2;
   c_.block(18, 0, 3, 6) = c2;

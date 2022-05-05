@@ -33,6 +33,7 @@ find_package(tf2_msgs REQUIRED)
 find_package(qpoases_vendor REQUIRED)
 find_package(osqp REQUIRED)
 find_package(OsqpEigen REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 # temporary workaound to fix qpoases_vender bug
 set (qpoases_vendor_LIBRARIES ${CMAKE_CURRENT_SOURCE_DIR}/third_party/qpOASES/libqpOASES.so)
@@ -170,6 +171,7 @@ ament_target_dependencies(
   qpoases_vendor
   osqp
   OsqpEigen
+  visualization_msgs
 )
 
 
@@ -222,8 +224,8 @@ install(
 )
 
 install(
-  DIRECTORY include/
-  DESTINATION include
+  DIRECTORY include launch
+  DESTINATION share/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)
@@ -283,6 +285,30 @@ if(BUILD_TESTING)
   
   ament_target_dependencies(
     formulation_test
+    nav_msgs
+    geometry_msgs
+    pinocchio
+    tf2
+    tf2_msgs
+    control_msgs
+    controller_interface
+    hardware_interface
+    pluginlib
+    rclcpp
+    rclcpp_lifecycle
+    realtime_tools
+    qpoases_vendor
+  )
+
+  add_executable(state_update test/state_update.cpp)
+
+  target_include_directories(
+    state_update PUBLIC
+    include
+  )
+  
+  ament_target_dependencies(
+    state_update
     nav_msgs
     geometry_msgs
     pinocchio

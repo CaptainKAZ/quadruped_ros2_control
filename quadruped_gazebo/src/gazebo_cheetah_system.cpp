@@ -54,7 +54,8 @@ bool GazeboCheetahSystem::initSim(
     rclcpp::Node::SharedPtr &model_nh, gazebo::physics::ModelPtr parent_model,
     const hardware_interface::HardwareInfo &hardware_info,
     sdf::ElementPtr sdf) {
-   (void)rcutils_logging_set_logger_level("pluginlib.ClassLoader",RCUTILS_LOG_SEVERITY_DEBUG);
+  (void)rcutils_logging_set_logger_level("pluginlib.ClassLoader",
+                                         RCUTILS_LOG_SEVERITY_DEBUG);
 
   RCLCPP_INFO(model_nh->get_logger(), "Initializing GazeboCheetahSystem...");
   this->dataPtr = std::make_unique<GazeboCheetahSystemPrivate>();
@@ -218,23 +219,21 @@ hardware_interface::return_type GazeboCheetahSystem::write() {
     return ret;
   }
   for (unsigned int j = 0; j < this->dataPtr->n_cheetah_joint; j++) {
-    const double ePos = angles::shortest_angular_distance(
-        this->dataPtr->sim_joints_[j]->Position(0),
-        this->dataPtr->joint_position_cmd_[j]);
+    const double ePos = this->dataPtr->joint_position_cmd_[j] -
+                        this->dataPtr->sim_joints_[j]->Position(0);
     // effort=effort_des + kp*(position_des-position_cur) +
     // kd*(velocity_des-velocity_cur);
-    double effort_cmd =
-        this->dataPtr->joint_effort_cmd_[j] +
-        this->dataPtr->joint_kp_cmd_[j] * (ePos) +
-        this->dataPtr->joint_kd_cmd_[j] *
-            (this->dataPtr->joint_velocity_cmd_[j] -
-             this->dataPtr->sim_joints_[j]->GetVelocity(0));
-    //TODO CHEETAH read from urdf!!!
-    if(effort_cmd>17){
-      effort_cmd=17;
+    double effort_cmd = this->dataPtr->joint_effort_cmd_[j] +
+                        this->dataPtr->joint_kp_cmd_[j] * (ePos) +
+                        this->dataPtr->joint_kd_cmd_[j] *
+                            (this->dataPtr->joint_velocity_cmd_[j] -
+                             this->dataPtr->sim_joints_[j]->GetVelocity(0));
+    // TODO CHEETAH read from urdf!!!
+    if (effort_cmd > 17) {
+      effort_cmd = 17;
     }
-    if(effort_cmd<-17){
-      effort_cmd=-17;
+    if (effort_cmd < -17) {
+      effort_cmd = -17;
     }
     this->dataPtr->sim_joints_[j]->SetForce(0, effort_cmd);
   }

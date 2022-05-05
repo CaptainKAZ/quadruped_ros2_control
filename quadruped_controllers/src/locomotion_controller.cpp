@@ -4,6 +4,7 @@
 #include "quadruped_controllers/gait.hpp"
 #include "quadruped_controllers/mpc_controller.hpp"
 #include "quadruped_controllers/quadruped_types.hpp"
+#include "quadruped_controllers/utils.hpp"
 #include <controller_interface/controller_interface.hpp>
 #include <cstddef>
 #include <iostream>
@@ -47,7 +48,7 @@ QuadrupedLocomotionController::init(const std::string &controller_name) {
     durationsVec << durations[0], durations[1], durations[2], durations[3];
     gaits_.emplace(name,
                    std::make_shared<MpcGait>(cycle, offsetsVec, durationsVec,
-                                                mpc_dt, mpc_horizon));
+                                             mpc_dt, mpc_horizon));
   }
   std::string current =
       auto_declare<std::string>("locomotion.gait.current", {});
@@ -70,7 +71,7 @@ CallbackReturn QuadrupedLocomotionController::on_configure(
     return ret;
   }
   p3d_pub_ = std::make_shared<P3dPublisher>(get_node(), state_, command_);
-
+  line_pub_ = std::make_shared<LinePublisher>(get_node(), state_, command_);
   need_update_param_ = false;
   auto locomotion_param_callback_handle =
       [this](std::vector<rclcpp::Parameter> params) {
@@ -103,12 +104,8 @@ CallbackReturn QuadrupedLocomotionController::on_configure(
 }
 
 controller_interface::return_type QuadrupedLocomotionController::update() {
-  static double des_vx{0.3};
-  double des_vy = 0;
-  double des_vw = 0;
-
-  std::cout << "des_vx" << des_vx << "  actual: " << state_->linear_vel_(0)
-            << std::endl;
+  p3d_pub_->clearPoint();
+  line_pub_->clearLine();
   if (need_update_param_) {
     need_update_param_ = false;
     try {
@@ -123,25 +120,39 @@ controller_interface::return_type QuadrupedLocomotionController::update() {
       return controller_interface::return_type::ERROR;
     }
   }
+
+  Vec3<double> v_world_des =
+      state_->quat_.toRotationMatrix() * command_->linear_vel_;
+
+  line_pub_->addLine(state_->pos_(0), state_->pos_(1), 1,
+                     state_->pos_(0) + v_world_des(0),
+                     state_->pos_(1) + v_world_des(1), 1);
+  auto state_rpy = quatToRPY(state_->quat_);
+  std::cout<<state_rpy(2)<<std::endl;
   Eigen::VectorXd traj;
+  // traj order: rpy xyz anglua_vel linear_vel
   traj.resize(12 * mpc_config_.horizon_);
   traj.setZero();
   if (current_gait_ == gaits_.at("stand")) {
-    for (int i = 0; i < mpc_config_.horizon_; ++i)
-      traj[12 * i + 5] = 0.26;
-    for (int i = 0; i < mpc_config_.horizon_; ++i)
-      traj[12 * i + 5] = 0.26;
-  } else {
-    des_vx += 0.0001;
     for (int i = 0; i < mpc_config_.horizon_; ++i) {
       traj[12 * i + 5] = 0.26;
-      traj[12 * i + 3] = state_->pos_(0) + des_vx * mpc_config_.dt_ * (i + 1);
-      traj[12 * i + 4] = state_->pos_(1);
-      traj[12 * i + 9] = des_vx;
+    }
+  } else {
+    for (int i = 0; i < mpc_config_.horizon_; ++i) {
+      traj[12 * i + 5] = 0.26;
+      traj[12 * i + 3] =
+          state_->pos_(0) + v_world_des(0) * mpc_config_.dt_ * (i + 1);
+      traj[12 * i + 4] =
+          state_->pos_(1) + v_world_des(1) * mpc_config_.dt_ * (i + 1);
+      traj[12 * i + 9] = v_world_des(0);
+      traj[12 * i + 10] = v_world_des(1);
+      traj[12 * i + 8] = command_->angular_vel_(2);
+      traj[12 * i + 2] =
+          state_rpy(2) + command_->angular_vel_(2) * mpc_config_.dt_ * (i);
     }
   }
   setTraj(traj);
-
+  
   current_gait_->update(node_->now());
   Eigen::VectorXd table = current_gait_->getMpcTable(mpc_solver_->getHorizon());
   setGaitTable(table);
@@ -151,74 +162,45 @@ controller_interface::return_type QuadrupedLocomotionController::update() {
   Eigen::VectorXd q(des_kine_solver_->getNq()), v(des_kine_solver_->getNv());
   q.setZero();
   v.setZero();
-  Eigen::Vector3d v_des;
-  v_des << des_vx, des_vy, 0;
-  v_des = state_->quat_.toRotationMatrix().transpose() * v_des;
   q.head(7) << state_->pos_, state_->quat_.coeffs();
-  v.head(6) << v_des, 0, 0, des_vw;
+  v.head(6) << v_world_des, 0, 0, command_->angular_vel_(2);
   des_kine_solver_->calcForwardKinematics(q, v);
 
   // front rare
   // static constexpr double sign_fr[4] = {1.0, 1.0, -1.0, -1.0};
   // left right
   static constexpr double sign_lr[4] = {1.0, -1.0, 1.0, -1.0};
+  static size_t loop_cont{0};
   for (int i = 0; i < 4; ++i) {
+    loop_cont++;
     // pfoot = phip
     Eigen::Vector3d pos;
     pos << kine_solver_->getHipLocationWorld(i);
     // offset
-    pos(1) += sign_lr[i] * 0.085;
+    pos(0) -= sign_lr[i] * std::sin(state_rpy(2)) * 0.085;
+    pos(1) += sign_lr[i] * std::cos(state_rpy(2)) * 0.085;
     // pfoot +=  vhip*tstance/2
     Eigen::Vector3d vel;
     vel << kine_solver_->getHipVelocityWorld(i);
+    line_pub_->addLine(pos(0), pos(1), pos(2), pos(0) + vel(0), pos(1) + vel(1),
+                       pos(2));
     pos += vel * stance_time(i) / 2;
     // pfoot += kp* (vhip-vhip_des)
     Eigen::Vector3d vhip_des;
     vhip_des = des_kine_solver_->getHipVelocityWorld(i);
-    pos += (vhip_des - vel) * 0.3;
+    pos += (vhip_des - vel) * 0.03;
     pos(2) = 0.0;
-    if (i == 1) {
-      p3d_pub_->setPoint(pos(0), pos(1), pos(2), "world");
-    }
-
+    p3d_pub_->addPoint(pos(0), pos(1), pos(2));
     if (table[i] == 0 && swing_stance_config_[i].stance_ == true) {
-
-      // p3d_pub_->update(node_->now());
-      // std::cout<<"setting swing " +LEG_CONFIG[i]<<std::endl;
       setFirstSwing(i, pos, 0.08, swing_time[i]);
     } else if (table[i] == 0) {
       setSwing(i, pos);
     }
   }
+  p3d_pub_->update(node_->now());
+  line_pub_->update(node_->now());
   return QuadrupedMpcController::update();
 }
-
-Eigen::VectorXd &
-QuadrupedLocomotionController::calcTrajFromCommand(Eigen::VectorXd &traj) {
-  Vec3<double> v_des_world =
-      state_->quat_.toRotationMatrix() * command_->linear_vel_;
-  traj.resize(12 * mpc_config_.horizon_);
-  traj.setZero();
-  for (int i = 0; i < mpc_config_.horizon_; ++i) {
-    if (i == 0) {
-      traj.head(12) << command_->rpy_, command_->xyz_, command_->angular_vel_,
-          v_des_world;
-      // height = 0.29 from mit code
-      traj(12 * i + 5) = 0.35;
-    } else {
-      // integrate rpy and xyz
-      traj.segment(12 * i, 3) = traj.segment(12 * (i - 1), 3) +
-                                command_->angular_vel_ * mpc_config_.dt_;
-      traj.segment(12 * i + 3, 3) = traj.segment(12 * (i - 1) + 3, 3) +
-                                    command_->linear_vel_ * mpc_config_.dt_;
-      // vel and rate remains the same
-      traj.segment(12 * i + 6, 3) = command_->angular_vel_;
-      traj.segment(12 * i + 9, 3) = v_des_world;
-    }
-  }
-  return traj;
-}
-
 } // namespace quadruped_controllers
 
 #include "pluginlib/class_list_macros.hpp"

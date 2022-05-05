@@ -13,13 +13,13 @@ def generate_launch_description():
         'quadruped_description'), 'urdf', 'quadruped.urdf.xacro')
     # xacro_path = os.path.join(get_package_share_directory(
     #     'quadruped_description'), 'urdf', 'mini_cheetah.urdf')
-    urdf = xacro.process_file(xacro_path,mappings={'hung_up':'True'})
+    urdf = xacro.process_file(xacro_path,mappings={'hung_up':'False'})
 
     # Gazebo classic
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([os.path.join(
             get_package_share_directory('gazebo_ros'), 'launch'), '/gazebo.launch.py']),
-        launch_arguments={'verbose': 'true'}.items()
+        launch_arguments={'verbose': 'true','pause':'true'}.items()
     )
     # Spawn
     spawn = Node(package='gazebo_ros', executable='spawn_entity.py',

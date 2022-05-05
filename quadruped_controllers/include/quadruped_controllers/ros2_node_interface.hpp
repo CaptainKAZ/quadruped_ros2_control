@@ -3,16 +3,15 @@
 // The module handles ROS non-realtime node comunication stuff
 
 #include "quadruped_controllers/quadruped_types.hpp"
-#include <geometry_msgs/msg/detail/point_stamped__struct.hpp>
 #include <memory>
 #include <rclcpp/node.hpp>
 #include <rclcpp/time.hpp>
 #include <string>
 
-#include "geometry_msgs/msg/twist_stamped.hpp"
+#include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "tf2_msgs/msg/tf_message.hpp"
-#include "geometry_msgs/msg/point_stamped.hpp"
+#include "visualization_msgs/msg/marker.hpp"
 
 #include "rclcpp_lifecycle/state.hpp"
 #include "realtime_tools/realtime_box.h"
@@ -84,9 +83,9 @@ public:
   void update(const rclcpp::Time &current_time) override;
 
 protected:
-  std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::TwistStamped>>
+  std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Twist>>
       cmd_sub_ = nullptr;
-  realtime_tools::RealtimeBox<std::shared_ptr<geometry_msgs::msg::TwistStamped>>
+  realtime_tools::RealtimeBox<std::shared_ptr<geometry_msgs::msg::Twist>>
       rx_msg_ptr{nullptr};
   rclcpp::Time last_time_;
 };
@@ -132,12 +131,36 @@ public:
             std::shared_ptr<QuadrupedState> &state,
             std::shared_ptr<QuadrupedCommand> &command) override;
   void update(const rclcpp::Time &current_time) override;
-  void setPoint(double x, double y, double z,std::string frame_id);
+  void addPoint(double x, double y, double z);
+  void clearPoint();
   protected:
-  std::shared_ptr<rclcpp::Publisher<geometry_msgs::msg::PointStamped>> point_pub =
+  std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::Marker>> point_pub =
       nullptr;
-  std::shared_ptr<realtime_tools::RealtimePublisher<geometry_msgs::msg::PointStamped>>
+  std::shared_ptr<realtime_tools::RealtimePublisher<visualization_msgs::msg::Marker>>
       rt_point_pub = nullptr;
+};
+
+class LinePublisher : public Ros2NodeInterfaceBase {
+public:
+  explicit LinePublisher(rclcpp::Node::SharedPtr &&node,
+                        std::shared_ptr<QuadrupedState> &state,
+                        std::shared_ptr<QuadrupedCommand> &command) {
+    init(std::forward<decltype(node)>(node),
+         std::forward<decltype(state)>(state),
+         std::forward<decltype(command)>(command));
+  }
+  ~LinePublisher() = default;
+  void init(rclcpp::Node::SharedPtr &&node,
+            std::shared_ptr<QuadrupedState> &state,
+            std::shared_ptr<QuadrupedCommand> &command) override;
+  void update(const rclcpp::Time &current_time) override;
+  void addLine(double x1, double y1, double z1,double x2, double y2, double z2);
+  void clearLine();
+  protected:
+  std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::Marker>> line_pub =
+      nullptr;
+  std::shared_ptr<realtime_tools::RealtimePublisher<visualization_msgs::msg::Marker>>
+      rt_line_pub = nullptr;
 };
 
 } // namespace quadruped_controllers

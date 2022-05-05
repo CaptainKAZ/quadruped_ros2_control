@@ -11,7 +11,7 @@ def generate_launch_description():
     xacro_path = os.path.join(get_package_share_directory(
         'quadruped_description'), 'urdf', 'quadruped.urdf.xacro')
     # xacro_path = os.path.join(get_package_share_directory(
-    #     'quadruped_description'), 'urdf', 'mini_cheetah.urdf')
+    #      'quadruped_description'), 'urdf', 'mini_cheetah.urdf')
     return LaunchDescription([
         Node(
             package='joint_state_publisher_gui',

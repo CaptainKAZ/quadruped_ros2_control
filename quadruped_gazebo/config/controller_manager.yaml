@@ -17,7 +17,7 @@ controller_manager:
     locomotion_controller:
       type: quadruped_controllers/QuadrupedLocomotionController
     
-    use_sim_time: false
+    use_sim_time: true
 
 jpos_initializer_controller:
   ros__parameters:
@@ -80,15 +80,16 @@ locomotion_controller:
           mpc_dt: 0.05
           mpc_horizon: 9
         tort:
-          cycle: 0.25
+          cycle: 0.3
           offsets: [0.,0.5,0.5,0.]
           durations: [0.5,0.5,0.5,0.5]
+          mpc_dt: 0.025
+          mpc_horizon: 10
         cat:
-          cycle: 0.6
+          cycle: 0.3
           offsets: [0.,0.25,0.50,0.75]
           durations: [0.75,0.75,0.75,0.75]
 
-    use_sim_time: true
 
     mpc:
       dt: 0.01
