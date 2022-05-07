@@ -126,7 +126,6 @@ void MpcFormulation::buildQp(double dt) {
 
 const Matrix<double, Dynamic, Dynamic, Eigen::RowMajor> &
 MpcFormulation::buildHessianMat() {
-  // dont know why x2
   h_ = 2. * (b_qp_.transpose() * l_ * b_qp_ + alpha_);
   // std::cout<<"h_: \n"<<h_<<std::endl;
   return h_;
@@ -145,7 +144,6 @@ MpcFormulation::buildGVec(double gravity, const QuadrupedState &state,
   for (int i = 0; i < horizon_; i++)
     for (int j = 0; j < STATE_DIM - 1; j++)
       x_ref(STATE_DIM * i + j, 0) = traj[12 * i + j];
-  // dont know why x2
   g_ = 2. *  b_qp_.transpose() * l_ * (a_qp_ * x_0 - x_ref);
   // std::cout<<"g_: \n"<<g_<<std::endl;
   return g_;

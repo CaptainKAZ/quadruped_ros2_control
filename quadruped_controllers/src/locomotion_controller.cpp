@@ -128,7 +128,7 @@ controller_interface::return_type QuadrupedLocomotionController::update() {
                      state_->pos_(0) + v_world_des(0),
                      state_->pos_(1) + v_world_des(1), 1);
   auto state_rpy = quatToRPY(state_->quat_);
-  std::cout<<state_rpy(2)<<std::endl;
+  std::cout<<state_->linear_vel_.transpose()<<std::endl;
   Eigen::VectorXd traj;
   // traj order: rpy xyz anglua_vel linear_vel
   traj.resize(12 * mpc_config_.horizon_);
@@ -170,9 +170,8 @@ controller_interface::return_type QuadrupedLocomotionController::update() {
   // static constexpr double sign_fr[4] = {1.0, 1.0, -1.0, -1.0};
   // left right
   static constexpr double sign_lr[4] = {1.0, -1.0, 1.0, -1.0};
-  static size_t loop_cont{0};
+  line_pub_->addLine(state_->pos_[0], state_->pos_[1], 1,state_->pos_[0]+state_->linear_vel_[0],state_->pos_[1]+state_->linear_vel_[1],1+state_->linear_vel_[2]);
   for (int i = 0; i < 4; ++i) {
-    loop_cont++;
     // pfoot = phip
     Eigen::Vector3d pos;
     pos << kine_solver_->getHipLocationWorld(i);

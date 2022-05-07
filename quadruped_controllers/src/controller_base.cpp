@@ -95,9 +95,10 @@ CallbackReturn QuadrupedControllerBase::on_activate(
 
   state_updater_queue_.push_back(kinematic_solver_update_);
   state_updater_queue_.push_back(linear_kf_pos_vel_update_);
+  //state_updater_queue_.push_back(from_ground_truth_update_);
   state_updater_queue_.push_back(kinematic_solver_update_);
   // enable in cheater mode
-  //state_updater_queue_.push_back(from_ground_truth_update_);
+  
   RCLCPP_INFO(get_node()->get_logger(), "Activated!!!!!!");
   start_time_ = get_node()->now();
   return CallbackReturn::SUCCESS;

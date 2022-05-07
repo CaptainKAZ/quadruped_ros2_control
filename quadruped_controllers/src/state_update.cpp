@@ -50,14 +50,17 @@ void InterfaceStateUpdate::update(const rclcpp::Time &time) {
     state_->contact_state_[leg] =
         quadruped_interface_->getLeg(leg)->getContact();
   }
-  state_->accel_ = Eigen::Map<decltype(state_->accel_)>(
-      quadruped_interface_->getIMUSensor()->get_linear_acceleration().data(),
-      3);
-  state_->angular_vel_ = Eigen::Map<decltype(state_->angular_vel_)>(
-      quadruped_interface_->getIMUSensor()->get_angular_velocity().data(), 3);
   auto quatArray_ = quadruped_interface_->getIMUSensor()->get_orientation();
   state_->quat_.coeffs() << quatArray_[0], quatArray_[1], quatArray_[2],
       quatArray_[3];
+  state_->accel_ = Eigen::Map<decltype(state_->accel_)>(
+      quadruped_interface_->getIMUSensor()->get_linear_acceleration().data(),
+      3);
+  state_->accel_=state_->quat_.toRotationMatrix()*state_->accel_;
+  state_->angular_vel_ = Eigen::Map<decltype(state_->angular_vel_)>(
+      quadruped_interface_->getIMUSensor()->get_angular_velocity().data(), 3);
+  state_->angular_vel_=state_->quat_.toRotationMatrix()*state_->angular_vel_;
+  
   if (initial_yaw_ == 0)
     initial_yaw_ = quatToRPY(state_->quat_)(2);
 
@@ -101,8 +104,8 @@ LinearKFPosVelEstimateUpdate::LinearKFPosVelEstimateUpdate(
   a_.block(3, 3, 3, 3) = Eigen::Matrix<double, 3, 3>::Identity();
   a_.block(6, 6, 12, 12) = Eigen::Matrix<double, 12, 12>::Identity();
   b_.setZero();
-  b_.block(0, 0, 3, 3) =
-      0.5 * dt * dt * Eigen::Matrix<double, 3, 3>::Identity();
+  // b_.block(0, 0, 3, 3) =
+  //     0.5 * dt * dt * Eigen::Matrix<double, 3, 3>::Identity();
   b_.block(3, 0, 3, 3) = dt * Eigen::Matrix<double, 3, 3>::Identity();
 
   Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> c1(3, 6);
