@@ -80,6 +80,9 @@ protected:
   std::shared_ptr<LinearKFPosVelEstimateUpdate> linear_kf_pos_vel_update_;
   std::vector<std::shared_ptr<StateUpdateBase>> state_updater_queue_;
   std::vector<std::shared_ptr<Ros2NodeInterfaceBase>> ros2_node_interface_queue_;
+  //use for debug
+  std::shared_ptr<P3dPublisher> p3d_pub_;
+  std::shared_ptr<LinePublisher> line_pub_;
   rclcpp::Time start_time_;
 };
 

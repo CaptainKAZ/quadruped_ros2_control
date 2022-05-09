@@ -3,6 +3,7 @@
 #include "quadruped_controllers/quadruped_types.hpp"
 #include "rclcpp/time.hpp"
 #include <memory>
+#include <rclcpp/qos.hpp>
 #include <utility>
 
 namespace quadruped_controllers {
@@ -121,7 +122,7 @@ void GroundTruthSubscriber::update(const rclcpp::Time &current_time) {
     return;
   }
   if (current_time - last_msg->header.stamp >
-      rclcpp::Duration::from_seconds(0.5)) {
+      rclcpp::Duration::from_seconds(0.1)) {
     rx_msg_ptr.set(std::make_shared<nav_msgs::msg::Odometry>());
     return;
   }
@@ -138,6 +139,9 @@ void GroundTruthSubscriber::update(const rclcpp::Time &current_time) {
   truth_state_->angular_vel_(0) = last_msg->twist.twist.angular.x;
   truth_state_->angular_vel_(1) = last_msg->twist.twist.angular.y;
   truth_state_->angular_vel_(2) = last_msg->twist.twist.angular.z;
+  //auto rot=truth_state_->quat_.toRotationMatrix();
+  //truth_state_->linear_vel_=rot*truth_state_->linear_vel_;
+  //truth_state_->angular_vel_=rot*truth_state_->angular_vel_;
   truth_state_->update_time_ = current_time;
 }
 
@@ -151,7 +155,7 @@ void P3dPublisher::init(rclcpp::Node::SharedPtr &&node,
   Ros2NodeInterfaceBase::init(std::forward<decltype(node)>(node), state,
                               command);
   point_pub = node->create_publisher<visualization_msgs::msg::Marker>(
-      "/debug", rclcpp::SystemDefaultsQoS());
+      topic_name_, rclcpp::SystemDefaultsQoS());
   rt_point_pub = std::make_shared<
       realtime_tools::RealtimePublisher<visualization_msgs::msg::Marker>>(
       point_pub);
@@ -201,7 +205,7 @@ void LinePublisher::init(rclcpp::Node::SharedPtr &&node,
   Ros2NodeInterfaceBase::init(std::forward<decltype(node)>(node), state,
                               command);
   line_pub = node->create_publisher<visualization_msgs::msg::Marker>(
-      "/debug", rclcpp::SystemDefaultsQoS());
+      "/debug_line", rclcpp::SystemDefaultsQoS());
   rt_line_pub = std::make_shared<
       realtime_tools::RealtimePublisher<visualization_msgs::msg::Marker>>(
       line_pub);

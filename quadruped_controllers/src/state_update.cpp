@@ -1,4 +1,5 @@
 #include "quadruped_controllers/state_update.hpp"
+#include "quadruped_controllers/quadruped_types.hpp"
 #include "quadruped_controllers/utils.hpp"
 #include <cstddef>
 #include <rclcpp/duration.hpp>
@@ -19,6 +20,7 @@ FromGroundTruthStateUpdate::FromGroundTruthStateUpdate(
 void FromGroundTruthStateUpdate::update(const rclcpp::Time &current_time) {
   if ((current_time - ground_truth_state_->update_time_).seconds() < 0.01) {
     state_->update_time_ = ground_truth_state_->update_time_;
+    state_->linear_vel_=ground_truth_state_->linear_vel_;
     state_->accel_ = ground_truth_state_->accel_;
     state_->pos_ = ground_truth_state_->pos_;
     state_->angular_vel_ = ground_truth_state_->angular_vel_;
@@ -56,7 +58,7 @@ void InterfaceStateUpdate::update(const rclcpp::Time &time) {
   state_->accel_ = Eigen::Map<decltype(state_->accel_)>(
       quadruped_interface_->getIMUSensor()->get_linear_acceleration().data(),
       3);
-  state_->accel_=state_->quat_.toRotationMatrix()*state_->accel_;
+  //state_->accel_=state_->quat_.toRotationMatrix()*state_->accel_;
   state_->angular_vel_ = Eigen::Map<decltype(state_->angular_vel_)>(
       quadruped_interface_->getIMUSensor()->get_angular_velocity().data(), 3);
   state_->angular_vel_=state_->quat_.toRotationMatrix()*state_->angular_vel_;
@@ -182,7 +184,7 @@ void LinearKFPosVelEstimateUpdate::update(const rclcpp::Time &time) {
 
   Vec3<double> g(0, 0, -9.81);
   Vec3<double> accel = state_->quat_.toRotationMatrix() * state_->accel_ + g;
-  Vec4<double> pzs = -0.0265 * Vec4<double>::Ones();
+  Vec4<double> pzs = Vec4<double>::Zero();
 
   Eigen::Matrix<double, 28, 1> y;
   y << ps_, vs_, pzs;

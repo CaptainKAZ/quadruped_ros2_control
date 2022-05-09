@@ -83,8 +83,8 @@ public:
   void update(const rclcpp::Time &current_time) override;
 
 protected:
-  std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Twist>>
-      cmd_sub_ = nullptr;
+  std::shared_ptr<rclcpp::Subscription<geometry_msgs::msg::Twist>> cmd_sub_ =
+      nullptr;
   realtime_tools::RealtimeBox<std::shared_ptr<geometry_msgs::msg::Twist>>
       rx_msg_ptr{nullptr};
   rclcpp::Time last_time_;
@@ -93,9 +93,9 @@ protected:
 // Subscribe to groundtruth odom
 class GroundTruthSubscriber : public Ros2NodeInterfaceBase {
 public:
-  explicit GroundTruthSubscriber(
-      rclcpp::Node::SharedPtr &&node, std::shared_ptr<QuadrupedState> &state,
-      std::shared_ptr<QuadrupedCommand> &command) {
+  explicit GroundTruthSubscriber(rclcpp::Node::SharedPtr &&node,
+                                 std::shared_ptr<QuadrupedState> &state,
+                                 std::shared_ptr<QuadrupedCommand> &command) {
     init(std::forward<decltype(node)>(node),
          std::forward<decltype(state)>(state),
          std::forward<decltype(command)>(command));
@@ -121,7 +121,9 @@ class P3dPublisher : public Ros2NodeInterfaceBase {
 public:
   explicit P3dPublisher(rclcpp::Node::SharedPtr &&node,
                         std::shared_ptr<QuadrupedState> &state,
-                        std::shared_ptr<QuadrupedCommand> &command) {
+                        std::shared_ptr<QuadrupedCommand> &command,
+                        std::string topic_name)
+      : topic_name_(topic_name) {
     init(std::forward<decltype(node)>(node),
          std::forward<decltype(state)>(state),
          std::forward<decltype(command)>(command));
@@ -133,18 +135,23 @@ public:
   void update(const rclcpp::Time &current_time) override;
   void addPoint(double x, double y, double z);
   void clearPoint();
-  protected:
-  std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::Marker>> point_pub =
-      nullptr;
-  std::shared_ptr<realtime_tools::RealtimePublisher<visualization_msgs::msg::Marker>>
+
+protected:
+  std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::Marker>>
+      point_pub = nullptr;
+  std::shared_ptr<
+      realtime_tools::RealtimePublisher<visualization_msgs::msg::Marker>>
       rt_point_pub = nullptr;
+  std::string topic_name_;
 };
 
 class LinePublisher : public Ros2NodeInterfaceBase {
 public:
   explicit LinePublisher(rclcpp::Node::SharedPtr &&node,
-                        std::shared_ptr<QuadrupedState> &state,
-                        std::shared_ptr<QuadrupedCommand> &command) {
+                         std::shared_ptr<QuadrupedState> &state,
+                         std::shared_ptr<QuadrupedCommand> &command,
+                         std::string topic_name)
+      : topic_name_(topic_name) {
     init(std::forward<decltype(node)>(node),
          std::forward<decltype(state)>(state),
          std::forward<decltype(command)>(command));
@@ -154,13 +161,17 @@ public:
             std::shared_ptr<QuadrupedState> &state,
             std::shared_ptr<QuadrupedCommand> &command) override;
   void update(const rclcpp::Time &current_time) override;
-  void addLine(double x1, double y1, double z1,double x2, double y2, double z2);
+  void addLine(double x1, double y1, double z1, double x2, double y2,
+               double z2);
   void clearLine();
-  protected:
+
+protected:
   std::shared_ptr<rclcpp::Publisher<visualization_msgs::msg::Marker>> line_pub =
       nullptr;
-  std::shared_ptr<realtime_tools::RealtimePublisher<visualization_msgs::msg::Marker>>
+  std::shared_ptr<
+      realtime_tools::RealtimePublisher<visualization_msgs::msg::Marker>>
       rt_line_pub = nullptr;
+  std::string topic_name_;
 };
 
 } // namespace quadruped_controllers

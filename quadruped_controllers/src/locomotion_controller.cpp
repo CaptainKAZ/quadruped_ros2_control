@@ -5,11 +5,13 @@
 #include "quadruped_controllers/mpc_controller.hpp"
 #include "quadruped_controllers/quadruped_types.hpp"
 #include "quadruped_controllers/utils.hpp"
+#include <chrono>
 #include <controller_interface/controller_interface.hpp>
 #include <cstddef>
 #include <iostream>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace quadruped_controllers {
@@ -70,8 +72,6 @@ CallbackReturn QuadrupedLocomotionController::on_configure(
   if (ret != CallbackReturn::SUCCESS) {
     return ret;
   }
-  p3d_pub_ = std::make_shared<P3dPublisher>(get_node(), state_, command_);
-  line_pub_ = std::make_shared<LinePublisher>(get_node(), state_, command_);
   need_update_param_ = false;
   auto locomotion_param_callback_handle =
       [this](std::vector<rclcpp::Parameter> params) {
@@ -128,7 +128,6 @@ controller_interface::return_type QuadrupedLocomotionController::update() {
                      state_->pos_(0) + v_world_des(0),
                      state_->pos_(1) + v_world_des(1), 1);
   auto state_rpy = quatToRPY(state_->quat_);
-  std::cout<<state_->linear_vel_.transpose()<<std::endl;
   Eigen::VectorXd traj;
   // traj order: rpy xyz anglua_vel linear_vel
   traj.resize(12 * mpc_config_.horizon_);
@@ -150,9 +149,10 @@ controller_interface::return_type QuadrupedLocomotionController::update() {
       traj[12 * i + 2] =
           state_rpy(2) + command_->angular_vel_(2) * mpc_config_.dt_ * (i);
     }
+    //std::this_thread::sleep_for(std::chrono::milliseconds(20));
   }
   setTraj(traj);
-  
+
   current_gait_->update(node_->now());
   Eigen::VectorXd table = current_gait_->getMpcTable(mpc_solver_->getHorizon());
   setGaitTable(table);
@@ -170,7 +170,30 @@ controller_interface::return_type QuadrupedLocomotionController::update() {
   // static constexpr double sign_fr[4] = {1.0, 1.0, -1.0, -1.0};
   // left right
   static constexpr double sign_lr[4] = {1.0, -1.0, 1.0, -1.0};
-  line_pub_->addLine(state_->pos_[0], state_->pos_[1], 1,state_->pos_[0]+state_->linear_vel_[0],state_->pos_[1]+state_->linear_vel_[1],1+state_->linear_vel_[2]);
+  // Vec3<double> g(0, 0, -9.81);
+  // Vec3<double> accel =
+  //     (state_->quat_.toRotationMatrix() * state_->accel_ + g) / 9.81;
+  // line_pub_->addLine(state_->pos_[0], state_->pos_[1], 0.5,
+  //                    state_->pos_[0] + accel[0], state_->pos_[1] + accel[1],
+  //                    0.5 + accel[2]);
+  p3d_pub_->addPoint(state_->pos_(0), state_->pos_(1), state_->pos_(2));
+  line_pub_->addLine(state_->pos_[0], state_->pos_[1], state_->pos_[2],
+                     state_->pos_[0] + state_->linear_vel_[0],
+                     state_->pos_[1] + state_->linear_vel_[1],
+                     state_->pos_[2] + state_->linear_vel_[2]);
+  // slow motion when linear v is too high
+  // if(state_->linear_vel_.norm()>0.2)
+  // if (state_->linear_vel_(0) > 0.1) {
+  //   state_->linear_vel_(0) = 0.1;
+  // } else if (state_->linear_vel_(0) < -0.1) {
+  //   state_->linear_vel_(0) = -0.1;
+  // }
+  // if (state_->linear_vel_(1) > 0.1) {
+  //   state_->linear_vel_(1) = 0.1;
+  // } else if (state_->linear_vel_(1) < -0.1) {
+  //   state_->linear_vel_(1) = -0.1;
+  // }
+
   for (int i = 0; i < 4; ++i) {
     // pfoot = phip
     Eigen::Vector3d pos;
@@ -195,9 +218,14 @@ controller_interface::return_type QuadrupedLocomotionController::update() {
     } else if (table[i] == 0) {
       setSwing(i, pos);
     }
+    p3d_pub_->addPoint(state_->foot_pos_[i](0), state_->foot_pos_[i](1),
+                       state_->foot_pos_[i](2));
+    line_pub_->addLine(state_->foot_pos_[i](0), state_->foot_pos_[i](1),
+                       state_->foot_pos_[i](2),
+                       state_->foot_pos_[i](0) + state_->foot_vel_[i](0),
+                       state_->foot_pos_[i](1) + state_->foot_vel_[i](1),
+                       state_->foot_pos_[i](2) + state_->foot_vel_[i](2));
   }
-  p3d_pub_->update(node_->now());
-  line_pub_->update(node_->now());
   return QuadrupedMpcController::update();
 }
 } // namespace quadruped_controllers

@@ -67,7 +67,11 @@ CallbackReturn QuadrupedControllerBase::on_configure(
       std::make_shared<LegController>(interface_, kine_solver_, state_);
   kinematic_solver_update_ =
       std::make_shared<KinematicSolverStateUpdate>(get_node(), state_, kine_solver_);
-
+  // debug visualize
+  p3d_pub_ = std::make_shared<P3dPublisher>(get_node(), state_, command_,
+                                            "desired_foot_pos");
+  line_pub_ = std::make_shared<LinePublisher>(get_node(), state_, command_,
+                                              "velocity_line");
   return CallbackReturn::SUCCESS;
 }
 
@@ -94,10 +98,10 @@ CallbackReturn QuadrupedControllerBase::on_activate(
   state_updater_queue_.push_back(interface_update_);
 
   state_updater_queue_.push_back(kinematic_solver_update_);
-  state_updater_queue_.push_back(linear_kf_pos_vel_update_);
-  //state_updater_queue_.push_back(from_ground_truth_update_);
-  state_updater_queue_.push_back(kinematic_solver_update_);
+  //state_updater_queue_.push_back(linear_kf_pos_vel_update_);
   // enable in cheater mode
+  state_updater_queue_.push_back(from_ground_truth_update_);
+  state_updater_queue_.push_back(kinematic_solver_update_);
   
   RCLCPP_INFO(get_node()->get_logger(), "Activated!!!!!!");
   start_time_ = get_node()->now();
@@ -111,25 +115,16 @@ CallbackReturn QuadrupedControllerBase::on_deactivate(
 }
 
 controller_interface::return_type QuadrupedControllerBase::update() {
-  //RCLCPP_INFO(get_node()->get_logger(), "Looping...");
-  //Timer timer;
-  //Timer total_timer;
   for (auto &ros2Interface : ros2_node_interface_queue_) {
     ros2Interface->update(get_node()->get_clock()->now());
   }
-  //RCLCPP_INFO(get_node()->get_logger(), "Ros2 Interface time: %f ms", timer.toc()*1000);
-  //timer.tic();
   for (auto &updater : state_updater_queue_) {
     updater->update(get_node()->get_clock()->now());
   }
-  //RCLCPP_INFO(get_node()->get_logger(), "State Updater time: %f ms", timer.toc()*1000);
-  //timer.tic();
   leg_controller_->writeInterface();
-  //RCLCPP_INFO(get_node()->get_logger(), "Write Interface time: %f ms", timer.toc()*1000);
-  //timer.tic();
   //print_state();
-  //RCLCPP_INFO(get_node()->get_logger(), "Print State time: %f ms", timer.toc()*1000);
-  //RCLCPP_INFO(get_node()->get_logger(), "Total time: %f ms", total_timer.toc()*1000);
+  p3d_pub_->update(node_->now());
+  line_pub_->update(node_->now());
   return controller_interface::return_type::OK;
 }
 

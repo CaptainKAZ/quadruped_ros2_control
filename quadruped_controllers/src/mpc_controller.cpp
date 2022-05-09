@@ -43,12 +43,13 @@ QuadrupedMpcController::init(const std::string &controller_name) {
 
   auto link = urdf_->getLink("base_link");
   Eigen::Matrix3d inertia;
-  inertia << link->inertial->ixx*0.9, link->inertial->ixy, link->inertial->ixz,
-      link->inertial->ixy, link->inertial->iyy, link->inertial->iyz,
-      link->inertial->ixz, link->inertial->iyz, link->inertial->izz;
-  inertia=inertia*1.2;
-  mpc_solver_ = std::make_shared<QpOasesSolver>(link->inertial->mass*2.5, -9.81,
-                                                0.6, inertia);
+  inertia << link->inertial->ixx * 0.9, link->inertial->ixy,
+      link->inertial->ixz, link->inertial->ixy, link->inertial->iyy,
+      link->inertial->iyz, link->inertial->ixz, link->inertial->iyz,
+      link->inertial->izz;
+  inertia = inertia * 1.2;
+  mpc_solver_ = std::make_shared<QpOasesSolver>(link->inertial->mass * 2.5,
+                                                -9.81, 0.6, inertia);
   traj_.resize(12 * mpc_config_.horizon_);
   Eigen::Matrix<double, 13, 1> weight;
   weight << mpc_config_.weight.ori_roll_, mpc_config_.weight.ori_pitch_,
@@ -106,29 +107,35 @@ CallbackReturn QuadrupedMpcController::on_configure(
   };
   mpc_param_callback_handle_ =
       get_node()->add_on_set_parameters_callback(mpc_param_callback);
-  if(updateParam()){
+  if (updateParam()) {
     need_update_param_ = false;
     return CallbackReturn::SUCCESS;
-  }else{
+  } else {
     return CallbackReturn::FAILURE;
   }
 }
 
 controller_interface::return_type QuadrupedMpcController::update() {
-  if(need_update_param_){
-    if(updateParam()){
+  if (need_update_param_) {
+    if (updateParam()) {
       need_update_param_ = false;
-      std::cout<<"update param"<<std::endl;
+      std::cout << "update param" << std::endl;
       return controller_interface::return_type::OK;
-    }else{
+    } else {
       return controller_interface::return_type::ERROR;
     }
   }
   mpc_solver_->solve(get_node()->now(), state_, gait_table_, traj_);
   std::vector<Vec3<double>> solution = mpc_solver_->getSolution();
   for (int i = 0; i < 4; ++i)
-    if (gait_table_[i] == 1)
+    if (gait_table_[i] == 1) {
+      // line_pub_->addLine(state_->foot_pos_[i](0), state_->foot_pos_[i](1),
+      //                    state_->foot_pos_[i](2),
+      //                    state_->foot_pos_[i](0) + solution[i](0)/100,
+      //                    state_->foot_pos_[i](1) + solution[i](1)/100,
+      //                    state_->foot_pos_[i](2) + solution[i](2)/100);
       setStance(i, solution[i]);
+    }
   return QuadrupedSwingStanceController::update();
 }
 
