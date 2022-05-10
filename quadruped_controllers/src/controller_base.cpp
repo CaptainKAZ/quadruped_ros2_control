@@ -47,11 +47,11 @@ QuadrupedControllerBase::init(const std::string &controller_name) {
       std::make_shared<TwistSubscriber>(get_node(), state_, command_));
   ros2_node_interface_queue_.emplace_back(
       std::make_shared<GroundTruthSubscriber>(get_node(), state_, command_));
-  auto ground_truth = std::dynamic_pointer_cast<GroundTruthSubscriber>(
+  ground_truth_state_ = std::dynamic_pointer_cast<GroundTruthSubscriber>(
                           ros2_node_interface_queue_.back())
                           ->getTruthState();
   from_ground_truth_update_ = std::make_shared<FromGroundTruthStateUpdate>(
-      get_node(), state_, ground_truth);
+      get_node(), state_, ground_truth_state_);
   linear_kf_pos_vel_update_ =
       std::make_shared<LinearKFPosVelEstimateUpdate>(get_node(), state_);
   interface_update_ =
@@ -98,9 +98,9 @@ CallbackReturn QuadrupedControllerBase::on_activate(
   state_updater_queue_.push_back(interface_update_);
 
   state_updater_queue_.push_back(kinematic_solver_update_);
-  //state_updater_queue_.push_back(linear_kf_pos_vel_update_);
+  state_updater_queue_.push_back(linear_kf_pos_vel_update_);
   // enable in cheater mode
-  state_updater_queue_.push_back(from_ground_truth_update_);
+  // state_updater_queue_.push_back(from_ground_truth_update_);
   state_updater_queue_.push_back(kinematic_solver_update_);
   
   RCLCPP_INFO(get_node()->get_logger(), "Activated!!!!!!");
@@ -199,10 +199,10 @@ void QuadrupedControllerBase::print_state() {
                          << "omega:\n"
                          << state_->angular_vel_.transpose() << "\n"
                          << "contact:\n"
-                         << state_->contact_state_[0] << ","
-                         << state_->contact_state_[1] << ","
-                         << state_->contact_state_[2] << ","
-                         << state_->contact_state_[3] << "\n"
+                         << state_->contact_[0] << ","
+                         << state_->contact_[1] << ","
+                         << state_->contact_[2] << ","
+                         << state_->contact_[3] << "\n"
                          << "foot_pos:\n"
                           << state_->foot_pos_[0].transpose() << "\n"
                           << state_->foot_pos_[1].transpose() << "\n"

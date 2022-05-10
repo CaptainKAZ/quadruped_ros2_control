@@ -135,6 +135,6 @@ struct QuadrupedState
   Eigen::VectorXd joint_state_;
   Eigen::Vector3d foot_pos_[4], foot_vel_[4];
   Vec12<double> joint_pos_,joint_vel_;
-  bool contact_state_[4];
+  bool contact_[4];
   rclcpp::Time update_time_;
 };

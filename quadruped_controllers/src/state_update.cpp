@@ -49,7 +49,7 @@ void InterfaceStateUpdate::update(const rclcpp::Time &time) {
       state_->joint_vel_(leg * 3 + joint) =
           quadruped_interface_->getLeg(leg)->getJoint(joint)->getVelocity();
     }
-    state_->contact_state_[leg] =
+    state_->contact_[leg] =
         quadruped_interface_->getLeg(leg)->getContact();
   }
   auto quatArray_ = quadruped_interface_->getIMUSensor()->get_orientation();
@@ -86,7 +86,8 @@ void KinematicSolverStateUpdate::update(const rclcpp::Time &time) {
   q.tail(12) = state_->joint_pos_;
   v.tail(12) = state_->joint_vel_;
   q.head(7) << state_->pos_, state_->quat_.coeffs();
-  v.head(6) << state_->linear_vel_, state_->angular_vel_;
+  RotMat<double> rot = state_->quat_.toRotationMatrix().transpose();
+  v.head(6) << rot * state_->linear_vel_, rot*state_->angular_vel_;
   pinocchio_solver_->calcForwardKinematics(q, v);
   pinocchio_solver_->getFootPosVel(state_);
   state_->update_time_ = time;
@@ -168,14 +169,14 @@ void LinearKFPosVelEstimateUpdate::update(const rclcpp::Time &time) {
 
     double high_suspect_number(100);
     q.block(q_index, q_index, 3, 3) =
-        (state_->contact_state_[i] ? 1. : high_suspect_number) *
+        (state_->contact_[i] ? 1. : high_suspect_number) *
         q.block(q_index, q_index, 3, 3);
     r.block(r_index1, r_index1, 3, 3) = 1. * r.block(r_index1, r_index1, 3, 3);
     r.block(r_index2, r_index2, 3, 3) =
-        (state_->contact_state_[i] ? 1. : high_suspect_number) *
+        (state_->contact_[i] ? 1. : high_suspect_number) *
         r.block(r_index2, r_index2, 3, 3);
     r(r_index3, r_index3) =
-        (state_->contact_state_[i] ? 1. : high_suspect_number) *
+        (state_->contact_[i] ? 1. : high_suspect_number) *
         r(r_index3, r_index3);
 
     ps_.segment(3 * i, 3) = state_->pos_ - state_->foot_pos_[i];

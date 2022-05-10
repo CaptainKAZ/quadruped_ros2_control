@@ -83,6 +83,7 @@ protected:
   //use for debug
   std::shared_ptr<P3dPublisher> p3d_pub_;
   std::shared_ptr<LinePublisher> line_pub_;
+  std::shared_ptr<QuadrupedState> ground_truth_state_;
   rclcpp::Time start_time_;
 };
 

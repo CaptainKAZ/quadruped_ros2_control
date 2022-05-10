@@ -77,6 +77,7 @@ def generate_launch_description():
             output='screen',
             parameters=[{
                 'robot_description': urdf.toxml(),
+                'publish_frequency': 200.0,
                 'use_sim_time': True
             }]),
         spawn,

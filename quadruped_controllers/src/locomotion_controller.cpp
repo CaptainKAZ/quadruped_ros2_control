@@ -149,7 +149,8 @@ controller_interface::return_type QuadrupedLocomotionController::update() {
       traj[12 * i + 2] =
           state_rpy(2) + command_->angular_vel_(2) * mpc_config_.dt_ * (i);
     }
-    //std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    // slow motion when tort
+    // std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
   setTraj(traj);
 
@@ -163,7 +164,7 @@ controller_interface::return_type QuadrupedLocomotionController::update() {
   q.setZero();
   v.setZero();
   q.head(7) << state_->pos_, state_->quat_.coeffs();
-  v.head(6) << v_world_des, 0, 0, command_->angular_vel_(2);
+  v.head(6) << command_->linear_vel_, 0, 0, command_->angular_vel_(2);
   des_kine_solver_->calcForwardKinematics(q, v);
 
   // front rare
@@ -177,10 +178,22 @@ controller_interface::return_type QuadrupedLocomotionController::update() {
   //                    state_->pos_[0] + accel[0], state_->pos_[1] + accel[1],
   //                    0.5 + accel[2]);
   p3d_pub_->addPoint(state_->pos_(0), state_->pos_(1), state_->pos_(2));
+  // estimated speed visualization
   line_pub_->addLine(state_->pos_[0], state_->pos_[1], state_->pos_[2],
                      state_->pos_[0] + state_->linear_vel_[0],
                      state_->pos_[1] + state_->linear_vel_[1],
                      state_->pos_[2] + state_->linear_vel_[2]);
+  // ground truth speed visualization
+  line_pub_->addLine(state_->pos_[0], state_->pos_[1], state_->pos_[2],
+                     state_->pos_[0] + ground_truth_state_->linear_vel_[0],
+                     state_->pos_[1] + ground_truth_state_->linear_vel_[1],
+                     state_->pos_[2] + ground_truth_state_->linear_vel_[2]);
+  line_pub_->addLine(
+      ground_truth_state_->pos_[0], ground_truth_state_->pos_[1],
+      ground_truth_state_->pos_[2],
+      ground_truth_state_->pos_[0] + ground_truth_state_->linear_vel_[0],
+      ground_truth_state_->pos_[1] + ground_truth_state_->linear_vel_[1],
+      ground_truth_state_->pos_[2] + ground_truth_state_->linear_vel_[2]);
   // slow motion when linear v is too high
   // if(state_->linear_vel_.norm()>0.2)
   // if (state_->linear_vel_(0) > 0.1) {
