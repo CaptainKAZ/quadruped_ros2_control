@@ -32,7 +32,7 @@ namespace odrive_cansimple_hardware_interface
 {
 hardware_interface::return_type CanSimpleHardwareInterface::configure(const hardware_interface::HardwareInfo& info)
 {
-  //node_=std::make_shared<rclcpp::Node>("odrive_cansimple_hardware_interface");
+  // node_=std::make_shared<rclcpp::Node>("odrive_cansimple_hardware_interface");
   if (configure_default(info) != hardware_interface::return_type::OK)
   {
     return hardware_interface::return_type::ERROR;
@@ -55,7 +55,7 @@ hardware_interface::return_type CanSimpleHardwareInterface::configure(const hard
   }
 
   status_ = hardware_interface::status::CONFIGURED;
-  
+
   return hardware_interface::return_type::OK;
 }
 
@@ -92,8 +92,11 @@ std::vector<hardware_interface::CommandInterface> CanSimpleHardwareInterface::ex
 
 hardware_interface::return_type CanSimpleHardwareInterface::start()
 {
-  // TODO(anyone): prepare the robot to receive commands
-
+  for (auto& axis : axies_)
+  {
+    axis.setControllerMode(0x03);
+    axis.setAxisRequestedState(0x08);
+  }
   status_ = hardware_interface::status::STARTED;
 
   return hardware_interface::return_type::OK;
@@ -101,8 +104,10 @@ hardware_interface::return_type CanSimpleHardwareInterface::start()
 
 hardware_interface::return_type CanSimpleHardwareInterface::stop()
 {
-  // TODO(anyone): prepare the robot to stop receiving commands
-
+  for (auto& axis : axies_)
+  {
+    axis.setAxisRequestedState(0x00);
+  }
   status_ = hardware_interface::status::STOPPED;
 
   return hardware_interface::return_type::OK;
@@ -110,25 +115,17 @@ hardware_interface::return_type CanSimpleHardwareInterface::stop()
 
 hardware_interface::return_type CanSimpleHardwareInterface::read()
 {
-  // TODO(anyone): read robot states
-
   return hardware_interface::return_type::OK;
 }
 
 hardware_interface::return_type CanSimpleHardwareInterface::write()
 {
-  // TODO(anyone): write robot's commands'
   for (auto& axis : axies_)
   {
     axis.writeCommand();
   }
   return hardware_interface::return_type::OK;
 }
-
-// void CanSimpleHardwareInterface::handleService(){
-//   rclcpp::spin(node_);
-//   rclcpp::shutdown();
-// }
 
 }  // namespace odrive_cansimple_hardware_interface
 

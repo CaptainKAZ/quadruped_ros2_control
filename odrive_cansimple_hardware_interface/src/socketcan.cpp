@@ -59,29 +59,29 @@ void SocketCan::open(const std::string& interfaceName, const uint32_t bitrate)
     RCUTILS_LOG_FATAL_NAMED("SocketCAN", "Can't init thread attribute");
     exit(-1);
   }
-  if (pthread_attr_setschedpolicy(&can_thread_attr, SCHED_FIFO))
-  {
-    RCUTILS_LOG_FATAL_NAMED("SocketCAN", "Can't set thread policy");
-    exit(-1);
-  }
-  if (pthread_attr_setinheritsched(&can_thread_attr, PTHREAD_EXPLICIT_SCHED))
-  {
-    RCUTILS_LOG_FATAL_NAMED("SocketCAN", "Can't set thread inherit");
-    exit(-1);
-  }
-  if (pthread_attr_setschedparam(&can_thread_attr, &can_thread_sched_param))
-  {
-    RCUTILS_LOG_FATAL_NAMED("SocketCAN", "Can't set thread priority");
-    exit(-1);
-  }
+  // if (pthread_attr_setschedpolicy(&can_thread_attr, SCHED_FIFO))
+  // {
+  //   RCUTILS_LOG_FATAL_NAMED("SocketCAN", "Can't set thread policy");
+  //   exit(-1);
+  // }
+  // if (pthread_attr_setinheritsched(&can_thread_attr, PTHREAD_EXPLICIT_SCHED))
+  // {
+  //   RCUTILS_LOG_FATAL_NAMED("SocketCAN", "Can't set thread inherit");
+  //   exit(-1);
+  // }
+  // if (pthread_attr_setschedparam(&can_thread_attr, &can_thread_sched_param))
+  // {
+  //   RCUTILS_LOG_FATAL_NAMED("SocketCAN", "Can't set thread priority");
+  //   exit(-1);
+  // }
   if (int err = pthread_create(&rxThreadHandle_, &can_thread_attr, &SocketCan::rxThread, this))
   {
-    RCUTILS_LOG_FATAL_NAMED("SocketCAN", "Can't create rx thread: %s", strerror(errno));
+    RCUTILS_LOG_FATAL_NAMED("SocketCAN", "Can't create rx thread: %d", err);
     exit(errno);
   }
   if (int err = pthread_create(&txThreadHandle_, &can_thread_attr, &SocketCan::txThread, this))
   {
-    RCUTILS_LOG_FATAL_NAMED("SocketCAN", "Can't create tx thread: %s", strerror(errno));
+    RCUTILS_LOG_FATAL_NAMED("SocketCAN", "Can't create tx thread: %d", err);
     exit(errno);
   }
 }

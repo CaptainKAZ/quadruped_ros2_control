@@ -39,6 +39,7 @@ ament_target_dependencies(
   hardware_interface
   rclcpp
 )
+
 # prevent pluginlib from using boost
 target_compile_definitions(odrive_cansimple_hardware_interface PUBLIC "PLUGINLIB__DISABLE_BOOST_FUNCTIONS")
 
@@ -60,12 +61,13 @@ install(
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
+
   # the following line skips the linter which checks for copyrights
   # uncomment the line when a copyright and license is not present in all source files
-  #set(ament_cmake_copyright_FOUND TRUE)
+  # set(ament_cmake_copyright_FOUND TRUE)
   # the following line skips cpplint (only works in a git repo)
   # uncomment the line when this package is not in a git repo
-  #set(ament_cmake_cpplint_FOUND TRUE)
+  # set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
   find_package(ament_cmake_gmock REQUIRED)
   find_package(ros2_control_test_assets REQUIRED)
@@ -85,6 +87,40 @@ if(BUILD_TESTING)
   target_link_libraries(
     fake_resource_manager
     odrive_cansimple_hardware_interface
+  )
+  add_executable(
+    torque_control
+    test/torque_control.cpp
+  )
+  target_link_libraries(
+    torque_control
+    odrive_cansimple_hardware_interface
+  )
+  add_executable(
+    pos_control
+    test/pos_control.cpp
+  )
+  target_link_libraries(
+    pos_control
+    odrive_cansimple_hardware_interface
+  )
+  add_executable(
+    vel_control
+    test/vel_control.cpp
+  )
+  target_link_libraries(
+    vel_control
+    odrive_cansimple_hardware_interface
+  )
+  install(
+    TARGETS
+    fake_resource_manager
+    vel_control
+    pos_control
+    torque_control
+    RUNTIME DESTINATION bin
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
   )
 endif()
 

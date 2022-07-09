@@ -67,12 +67,10 @@ public:
 
 private:
 
-  //rclcpp::Node::SharedPtr node_;
   void handleService();
 
   std::vector<CanSimpleAxis> axies_;
   std::unordered_map<std::string, std::shared_ptr<SocketCan>> can_devices_;
-  //std::unique_ptr<std::thread> non_realtime_thread_;
 };
 
 }  // namespace odrive_cansimple_hardware_interface
