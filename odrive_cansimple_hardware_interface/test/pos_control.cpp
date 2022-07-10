@@ -41,7 +41,7 @@ int main()
     }
     else
     {
-      *axis.getStatePosPtr() = 2 * M_PI;
+      *axis.getCommandPosPtr() = 2 * M_PI;
     }
     axis.writeCommand();
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
