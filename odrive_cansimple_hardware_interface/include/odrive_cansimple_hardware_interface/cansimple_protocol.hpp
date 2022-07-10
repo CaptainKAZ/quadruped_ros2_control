@@ -43,6 +43,7 @@ public:
     MSG_RESET_ODRIVE,
     MSG_GET_VBUS_VOLTAGE,
     MSG_CLEAR_ERRORS,
+    MSG_SET_GAINS,
     MSG_CO_HEARTBEAT_CMD = 0x700,  // CANOpen NMT Heartbeat  SEND
   };
   void configure(double gear, double kt)
@@ -95,19 +96,29 @@ public:
   }
 
   void setInputPos(double pos, double vel,double tau_ff){
-    can_frame pos_frame{};
-    double actuator_command_pos = (pos - joint_offset_) * reduction_ratio_ * RAD_TO_TURN;
-    double actuator_command_vel = vel * reduction_ratio_ * RAD_TO_TURN;
-    double actuator_command_eff = tau_ff / reduction_ratio_;
+    can_frame frame{};
+    float actuator_command_pos = (pos - joint_offset_) * reduction_ratio_ * RAD_TO_TURN;
+    float actuator_command_vel = vel * reduction_ratio_ * RAD_TO_TURN;
+    float actuator_command_eff = tau_ff / reduction_ratio_;
     // use Set Input Pos command
-    pos_frame.can_id = (can_id_ & 0x3F) << 5 | MSG_SET_INPUT_POS;
-    pos_frame.can_dlc = 8;
-    std::memcpy(pos_frame.data, &actuator_command_pos, sizeof(float));
+    frame.can_id = (can_id_ & 0x3F) << 5 | MSG_SET_INPUT_POS;
+    frame.can_dlc = 8;
+    std::memcpy(frame.data, &actuator_command_pos, sizeof(float));
     int16_t temp = (int16_t)(actuator_command_vel * 1000);
-    std::memcpy(pos_frame.data + 4, &temp, sizeof(int16_t));
+    std::memcpy(frame.data + 4, &temp, sizeof(int16_t));
     temp = (int16_t)(actuator_command_eff * 1000);
-    std::memcpy(pos_frame.data + 6, &temp, sizeof(int16_t));
-    *can_device_ << pos_frame;
+    std::memcpy(frame.data + 6, &temp, sizeof(int16_t));
+    *can_device_ << frame;
+  }
+
+  void setGain(double kp,double kd){
+    can_frame frame{};
+    frame.can_id=(can_id_ & 0x3F) << 5 | MSG_SET_GAINS;
+    float fp32kp=kp;
+    float fp32kd=kd;
+    std::memcpy(frame.data, &fp32kp,sizeof(float));
+    std::memcpy(frame.data+4, &fp32kd,sizeof(float));
+    *can_device_ << frame;
   }
 
   void writeCommand()
