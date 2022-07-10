@@ -18,7 +18,7 @@ int main(){
     std::cout<<"can id?"<<std::endl;
     std::cin>>id;
     axis.attach(can_device,id);
-    axis.setControllerMode(0x03);
+    axis.setControllerMode(0x03,0x01);
     axis.setAxisRequestedState(0x08);
     // auto last_time = std::chrono::high_resolution_clock::now();
     *axis.getCommandKpPtr()=0;

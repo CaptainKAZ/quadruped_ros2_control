@@ -22,7 +22,7 @@ int main()
   std::cout << "can id?" << std::endl;
   std::cin >> id;
   axis.attach(can_device, id);
-  axis.setControllerMode(0x03);
+  axis.setControllerMode(0x03,0x01);
   axis.setAxisRequestedState(0x08);
   // NOTE:may need to adjust
   *axis.getCommandKpPtr() = 20;

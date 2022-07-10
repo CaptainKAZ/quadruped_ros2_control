@@ -94,7 +94,7 @@ hardware_interface::return_type CanSimpleHardwareInterface::start()
 {
   for (auto& axis : axies_)
   {
-    axis.setControllerMode(0x03);
+    axis.setControllerMode(0x03,0x01);
     axis.setAxisRequestedState(0x08);
   }
   status_ = hardware_interface::status::STARTED;

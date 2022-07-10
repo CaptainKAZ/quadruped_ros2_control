@@ -208,15 +208,18 @@ const SocketCan* SocketCan::operator>>(struct can_frame& frame)
   {
     RCUTILS_LOG_ERROR_NAMED("SocketCAN", "Can't receive frame, callback is set");
   }
-  std::lock_guard<std::mutex> lock(rxMutex_);
-  if (rxQueue_.empty())
+  if (rxMutex_.try_lock())
   {
-    memset(&frame, 0, sizeof(can_frame));
-  }
-  else
-  {
-    frame = rxQueue_.front();
-    rxQueue_.pop();
+    if (rxQueue_.empty())
+    {
+      memset(&frame, 0, sizeof(can_frame));
+    }
+    else
+    {
+      frame = rxQueue_.front();
+      rxQueue_.pop();
+    }
+    rxMutex_.unlock();
   }
   return this;
 }
