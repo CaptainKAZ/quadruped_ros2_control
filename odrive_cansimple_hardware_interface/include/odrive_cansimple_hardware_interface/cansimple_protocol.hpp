@@ -111,7 +111,7 @@ public:
     *can_device_ << frame;
   }
 
-  void setGain(double kp,double kd){
+  void setGains(double kp,double kd){
     can_frame frame{};
     frame.can_id=(can_id_ & 0x3F) << 5 | MSG_SET_GAINS;
     float fp32kp=kp;
@@ -124,27 +124,12 @@ public:
   void writeCommand()
   {
     setInputPos(joint_command_pos_,joint_command_vel_,joint_command_eff_);
-    if (last_kp != joint_command_kp_)
-    {
-      last_kp = joint_command_kp_;
-      can_frame kp_frame{};
-      kp_frame.can_id = (can_id_ & 0x3F) << 5 | 0x01A;
-      double actuator_command_kp = joint_command_kp_ / reduction_ratio_;
-      kp_frame.can_dlc = 4;
-      std::memcpy(kp_frame.data, &actuator_command_kp, sizeof(float));
-      *can_device_ << kp_frame;
+    if (last_kp != joint_command_kp_||last_kd!=joint_command_kd_){
+      last_kd=joint_command_kd_;
+      last_kp=joint_command_kp_;
+      setGains(joint_command_kp_, joint_command_kd_);
     }
-    if (last_kd != joint_command_kd_)
-    {
-      last_kd = joint_command_kd_;
-      can_frame kd_frame{};
-      kd_frame.can_id = (can_id_ & 0x3F) << 5 | 0x01B;
-      double actuator_command_kd = joint_command_kd_ / reduction_ratio_;
-      kd_frame.can_dlc = 8;
-      std::memcpy(kd_frame.data, &actuator_command_kd, sizeof(float));
-      std::memset(kd_frame.data + 4, 0, 4);
-      *can_device_ << kd_frame;
-    }
+    
     if (joint_command_calibration_pos_ != std::numeric_limits<double>::quiet_NaN())
     {
       setHome(joint_command_calibration_pos_);
