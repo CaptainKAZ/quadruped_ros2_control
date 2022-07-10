@@ -25,9 +25,9 @@ int main()
   axis.setControllerMode(0x03,0x01);
   axis.setAxisRequestedState(0x08);
   // NOTE:may need to adjust
-  *axis.getCommandKpPtr() = 20;
-  *axis.getCommandKpPtr() = 5;
-  *axis.getRequestStatePtr() = 0;
+  //*axis.getCommandKpPtr() = 20;
+  //*axis.getCommandKpPtr() = 5;
+  axis.setGains(10, 0.01);
   while (1)
   {
     printf("%f ", *axis.getStatePosPtr());
