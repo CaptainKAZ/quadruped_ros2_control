@@ -16,7 +16,7 @@ namespace odrive_cansimple_hardware_interface
 class CanSimpleAxis
 {
 public:
-  enum
+  enum OdriveCommand
   {
     MSG_CO_NMT_CTRL = 0x000,  // CANOpen NMT Message REC
     MSG_ODRIVE_HEARTBEAT,
@@ -63,14 +63,14 @@ public:
   void eStop()
   {
     can_frame frame{};
-    frame.can_id = can_id_ << 5 | 0x02;
+    frame.can_id = (can_id_ & 0x3F) << 5 | MSG_ODRIVE_ESTOP;
     frame.can_dlc = 0;
     *can_device_ << frame;
   }
   void clearErrors()
   {
     can_frame frame{};
-    frame.can_id = can_id_ << 5 | 0x018;
+    frame.can_id = (can_id_ & 0x3F) << 5 | MSG_CLEAR_ERRORS;
     frame.can_dlc = 0;
     *can_device_ << frame;
   }
@@ -78,7 +78,7 @@ public:
   void setAxisRequestedState(uint16_t state)
   {
     can_frame frame{};
-    frame.can_id = can_id_ << 5 | 0x07;
+    frame.can_id = (can_id_ & 0x3F) << 5 | MSG_SET_AXIS_REQUESTED_STATE;
     frame.can_dlc = 2;
     std::memcpy(frame.data, &state, 2);
     *can_device_ << frame;
@@ -87,20 +87,20 @@ public:
   void setControllerMode(uint32_t control_mode,uint32_t input_mode)
   {
     can_frame frame{};
-    frame.can_id = can_id_ << 5 | 0x0B;
+    frame.can_id = (can_id_ & 0x3F) << 5 | MSG_SET_CONTROLLER_MODES;
     frame.can_dlc = 8;
     std::memcpy(frame.data, &control_mode, 4);
     std::memcpy(frame.data+4, &input_mode, 4);
     *can_device_ << frame;
   }
-  void writeCommand()
-  {
+
+  void setInputPos(double pos, double vel,double tau_ff){
     can_frame pos_frame{};
-    double actuator_command_pos = (joint_command_pos_ - joint_offset_) * reduction_ratio_ * RAD_TO_TURN;
-    double actuator_command_vel = joint_command_vel_ * reduction_ratio_ * TURN_TO_RAD;
-    double actuator_command_eff = joint_command_eff_ / reduction_ratio_;
+    double actuator_command_pos = (pos - joint_offset_) * reduction_ratio_ * RAD_TO_TURN;
+    double actuator_command_vel = vel * reduction_ratio_ * RAD_TO_TURN;
+    double actuator_command_eff = tau_ff / reduction_ratio_;
     // use Set Input Pos command
-    pos_frame.can_id = (can_id_ & 0x3F) << 5 | 0x0C;
+    pos_frame.can_id = (can_id_ & 0x3F) << 5 | MSG_SET_INPUT_POS;
     pos_frame.can_dlc = 8;
     std::memcpy(pos_frame.data, &actuator_command_pos, sizeof(float));
     int16_t temp = (int16_t)(actuator_command_vel * 1000);
@@ -108,6 +108,11 @@ public:
     temp = (int16_t)(actuator_command_eff * 1000);
     std::memcpy(pos_frame.data + 6, &temp, sizeof(int16_t));
     *can_device_ << pos_frame;
+  }
+
+  void writeCommand()
+  {
+    setInputPos(joint_command_pos_,joint_command_vel_,joint_command_eff_);
     if (last_kp != joint_command_kp_)
     {
       last_kp = joint_command_kp_;
