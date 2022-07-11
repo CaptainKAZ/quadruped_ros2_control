@@ -130,20 +130,20 @@ public:
       setGains(joint_command_kp_, joint_command_kd_);
     }
     
-    if (joint_command_calibration_pos_ != std::numeric_limits<double>::quiet_NaN())
+    if (joint_command_calibration_pos_ != std::numeric_limits<double>::infinity())
     {
       setHome(joint_command_calibration_pos_);
-      joint_command_calibration_pos_ = std::numeric_limits<double>::quiet_NaN();
+      joint_command_calibration_pos_ = std::numeric_limits<double>::infinity();
     }
-    if (joint_command_request_state_ != std::numeric_limits<uint32_t>::quiet_NaN())
+    if (joint_command_request_state_ != std::numeric_limits<uint32_t>::infinity())
     {
       setAxisRequestedState(joint_command_request_state_);
-      joint_command_request_state_ = std::numeric_limits<uint32_t>::quiet_NaN();
+      joint_command_request_state_ = std::numeric_limits<uint32_t>::infinity();
     }
-    if (joint_command_clear_error_ != std::numeric_limits<uint32_t>::quiet_NaN())
+    if (joint_command_clear_error_ != std::numeric_limits<uint32_t>::infinity())
     {
       clearErrors();
-      joint_command_clear_error_ = std::numeric_limits<uint32_t>::quiet_NaN();
+      joint_command_clear_error_ = std::numeric_limits<uint32_t>::infinity();
     }
   }
   inline double* getCommandPosPtr()
@@ -250,12 +250,12 @@ private:
   double joint_command_pos_ = 0;
   double joint_command_vel_ = 0;
   double joint_command_eff_ = 0;
-  double joint_command_calibration_pos_ = std::numeric_limits<double>::quiet_NaN();
-  double joint_command_request_state_ = std::numeric_limits<double>::quiet_NaN();
-  double joint_command_clear_error_ = std::numeric_limits<double>::quiet_NaN();
-  double joint_state_pos_ = std::numeric_limits<double>::quiet_NaN();
-  double joint_state_vel_ = std::numeric_limits<double>::quiet_NaN();
-  double joint_state_eff_ = std::numeric_limits<double>::quiet_NaN();
+  double joint_command_calibration_pos_ = std::numeric_limits<double>::infinity();
+  double joint_command_request_state_ = std::numeric_limits<double>::infinity();
+  double joint_command_clear_error_ = std::numeric_limits<double>::infinity();
+  double joint_state_pos_ = std::numeric_limits<double>::infinity();
+  double joint_state_vel_ = std::numeric_limits<double>::infinity();
+  double joint_state_eff_ = std::numeric_limits<double>::infinity();
   // to detect kp kd change
   double last_kp = 0;
   double last_kd = 0;
