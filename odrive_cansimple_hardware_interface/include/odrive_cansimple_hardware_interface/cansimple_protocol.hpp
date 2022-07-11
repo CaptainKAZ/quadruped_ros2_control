@@ -113,6 +113,7 @@ public:
 
   void setGains(double kp,double kd){
     can_frame frame{};
+    frame.can_dlc=8;
     frame.can_id=(can_id_ & 0x3F) << 5 | MSG_SET_GAINS;
     float fp32kp=kp;
     float fp32kd=kd;
