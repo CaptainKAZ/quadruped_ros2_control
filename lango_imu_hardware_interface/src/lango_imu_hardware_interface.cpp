@@ -34,18 +34,6 @@ std::vector<hardware_interface::StateInterface> LangoIMUHardwareInterface::expor
   return state_interfaces;
 }
 
-std::vector<hardware_interface::CommandInterface> LangoIMUHardwareInterface::export_command_interfaces()
-{
-  std::vector<hardware_interface::CommandInterface> command_interfaces;
-  for (uint i = 0; i < info_.joints.size(); i++) {
-    command_interfaces.emplace_back(hardware_interface::CommandInterface(
-        // TODO(anyone): insert correct interfaces
-        info_.joints[i].name, hardware_interface::HW_IF_POSITION, &hw_commands_[i]));
-  }
-
-  return command_interfaces;
-}
-
 hardware_interface::return_type LangoIMUHardwareInterface::start()
 {
   // TODO(anyone): prepare the robot to receive commands
@@ -67,13 +55,6 @@ hardware_interface::return_type LangoIMUHardwareInterface::stop()
 hardware_interface::return_type LangoIMUHardwareInterface::read()
 {
   // TODO(anyone): read robot states
-
-  return hardware_interface::return_type::OK;
-}
-
-hardware_interface::return_type LangoIMUHardwareInterface::write()
-{
-  // TODO(anyone): write robot's commands'
 
   return hardware_interface::return_type::OK;
 }

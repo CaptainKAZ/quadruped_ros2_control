@@ -29,9 +29,6 @@ public:
   std::vector<hardware_interface::StateInterface> export_state_interfaces() override;
 
   LANGO_IMU_HARDWARE_INTERFACE_PUBLIC
-  std::vector<hardware_interface::CommandInterface> export_command_interfaces() override;
-
-  LANGO_IMU_HARDWARE_INTERFACE_PUBLIC
   hardware_interface::return_type start() override;
 
   LANGO_IMU_HARDWARE_INTERFACE_PUBLIC
@@ -39,9 +36,6 @@ public:
 
   LANGO_IMU_HARDWARE_INTERFACE_PUBLIC
   hardware_interface::return_type read() override;
-
-  LANGO_IMU_HARDWARE_INTERFACE_PUBLIC
-  hardware_interface::return_type write() override;
 
 private:
   std::vector<double> hw_commands_;
