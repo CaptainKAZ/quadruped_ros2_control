@@ -1,0 +1,9 @@
+<library path="lango_imu_hardware_interface">
+  <class name="lango_imu_hardware_interface/LangoIMUHardwareInterface"
+         type="lango_imu_hardware_interface::LangoIMUHardwareInterface"
+         base_class_type="hardware_interface::SensorInterface">
+    <description>
+      ros2_control hardware interface.
+    </description>
+  </class>
+</library>

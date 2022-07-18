@@ -26,8 +26,8 @@ int main()
   axis.setAxisRequestedState(0x08);
   auto last_time = std::chrono::high_resolution_clock::now();
   // NOTE:may need to adjust
-  *axis.getCommandKpPtr() = 20;
   *axis.getCommandKpPtr() = 5;
+  *axis.getCommandKdPtr() = 0.01;
   *axis.getRequestStatePtr() = 0;
   while (1)
   {
